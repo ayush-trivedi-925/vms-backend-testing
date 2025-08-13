@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Meeting {
+  id  String @id @default(uuid())
+  visitorFirstName String
+  visitorLastName String
+  visitorOrg  String
+  visitorEmail  String
+  reasonOfVisit String
+  host  String
+
+  startTime DateTime @default(now())
+  endTime DateTime?
+  
+  status  meetingStatus @default(ONGOING)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt  
+}
+
+enum meetingStatus {
+  ONGOING
+  COMPLETED
+}
