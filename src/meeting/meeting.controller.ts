@@ -1,14 +1,16 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { CreateMeetingDto } from 'src/dto/create-meeting.dto';
 import { MeetingService } from './meeting.service';
 import { EndMeetingDto } from 'src/dto/end-meeting.dto';
+import { AuthGuard } from 'src/guard/auth.guard';
 
 @Controller('meeting')
+@UseGuards(AuthGuard)
 export class MeetingController {
   constructor(private readonly meetingService: MeetingService) {}
   @Post('check-in')
-  async createMeeting(@Body() createMeetingDto: CreateMeetingDto) {
-    return this.meetingService.creatMeeting(createMeetingDto);
+  async createMeeting(@Req() req, @Body() createMeetingDto: CreateMeetingDto) {
+    return this.meetingService.creatMeeting(req.orgId, createMeetingDto);
   }
 
   @Post('check-out')
@@ -16,12 +18,12 @@ export class MeetingController {
     return this.meetingService.endMeeting(endMeetingDto);
   }
   @Get('complete')
-  async getAllCompletedMeetings() {
-    return this.meetingService.completedMeetings();
+  async getAllCompletedMeetings(@Req() req) {
+    return this.meetingService.completedMeetings(req.orgId);
   }
 
   @Get('on-going')
-  async getAllOnGoingMeetings() {
-    return this.meetingService.onGoingMeetings();
+  async getAllOnGoingMeetings(@Req() req) {
+    return this.meetingService.onGoingMeetings(req.orgId);
   }
 }

@@ -13,7 +13,9 @@ model Organization {
   orgName  String
   orgEmail String @unique
   password  String
+  meeting Meeting[]
   employee Employee[]
+  refreshToken RefreshToken[]
 }
 
 model Meeting {
@@ -23,7 +25,10 @@ model Meeting {
   visitorOrg  String
   visitorEmail  String
   reasonOfVisit String
-  host  String
+  orgId   String
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  hostId String
+  employee Employee @relation(fields: [hostId], references: [id], onDelete: Cascade)
 
   startTime DateTime @default(now())
   endTime DateTime?
@@ -41,6 +46,15 @@ model Employee {
   employeeEmail String  @unique
   designation String 
   department  String
+  meeting Meeting[]
+}
+
+model RefreshToken {
+  id  String @id @default(uuid())
+  token String @unique
+  orgId  String @unique
+  organization  Organization  @relation(fields: [orgId],  references: [id], onDelete: Cascade)
+  expiryDate  DateTime
 }
 
 enum meetingStatus {

@@ -23,5 +23,5 @@ export class CreateMeetingDto {
 
   @IsString()
   @IsNotEmpty()
-  host: string;
+  hostId: string;
 }

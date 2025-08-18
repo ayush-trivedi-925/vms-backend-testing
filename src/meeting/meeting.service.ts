@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  UseGuards,
+} from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
 import { CreateMeetingDto } from 'src/dto/create-meeting.dto';
 import { EndMeetingDto } from 'src/dto/end-meeting.dto';
@@ -6,16 +11,36 @@ import { EndMeetingDto } from 'src/dto/end-meeting.dto';
 @Injectable()
 export class MeetingService {
   constructor(private readonly databaseService: DatabaseService) {}
-  async creatMeeting(createMeetingDto: CreateMeetingDto) {
+  async creatMeeting(orgId: string, createMeetingDto: CreateMeetingDto) {
     const {
       visitorFirstName,
       visitorLastName,
       visitorOrg,
       visitorEmail,
       reasonOfVisit,
-      host,
+      hostId,
     } = createMeetingDto;
     try {
+      const orgExists = await this.databaseService.organization.findUnique({
+        where: {
+          id: orgId,
+        },
+      });
+
+      if (!orgExists) {
+        throw new BadRequestException('Invalid Org ID.');
+      }
+
+      const employeeExists = await this.databaseService.employee.findUnique({
+        where: {
+          id: hostId,
+        },
+      });
+
+      if (!employeeExists) {
+        throw new BadRequestException('Invalid Employee ID.');
+      }
+
       const meeting = await this.databaseService.meeting.create({
         data: {
           visitorFirstName,
@@ -23,7 +48,8 @@ export class MeetingService {
           visitorEmail,
           visitorOrg,
           reasonOfVisit,
-          host,
+          orgId,
+          hostId,
         },
       });
       const now = new Date().toLocaleString();
@@ -31,6 +57,10 @@ export class MeetingService {
         Success: true,
         Message: `${visitorFirstName} has checked in at ${now}.`,
         MeetingDetails: meeting,
+        HostDetails: {
+          Name: employeeExists.employeeName,
+          Email: employeeExists.employeeEmail,
+        },
       };
     } catch (error) {
       return {
@@ -90,9 +120,10 @@ export class MeetingService {
     }
   }
 
-  async onGoingMeetings() {
+  async onGoingMeetings(orgId: string) {
     const allOnGoingMeetings = await this.databaseService.meeting.findMany({
       where: {
+        orgId,
         status: 'ONGOING',
       },
     });
@@ -109,9 +140,10 @@ export class MeetingService {
     };
   }
 
-  async completedMeetings() {
+  async completedMeetings(orgId: string) {
     const allCompletedMeetings = await this.databaseService.meeting.findMany({
       where: {
+        orgId,
         status: 'COMPLETED',
       },
     });
