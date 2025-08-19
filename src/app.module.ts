@@ -7,6 +7,8 @@ import { OrganizationModule } from './organization/organization.module';
 import { EmployeeModule } from './employee/employee.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { AuthService } from './auth/auth.service';
+import { AuthModule } from './auth/auth.module';
 import config from './config/config';
 
 @Module({
@@ -22,7 +24,7 @@ import config from './config/config';
       useFactory: async (config) => ({
         secret: config.get('jwt.secret'),
         signOptions: {
-          expiresIn: '10m',
+          expiresIn: '7d',
         },
       }),
       inject: [ConfigService],
@@ -31,8 +33,9 @@ import config from './config/config';
     DatabaseModule,
     OrganizationModule,
     EmployeeModule,
+    AuthModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, AuthService],
 })
 export class AppModule {}

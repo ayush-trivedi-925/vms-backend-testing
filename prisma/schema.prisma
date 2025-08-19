@@ -12,10 +12,11 @@ model Organization {
   id String @id @default(uuid())
   orgName  String
   orgEmail String @unique
-  password  String
-  meeting Meeting[]
-  employee Employee[]
-  refreshToken RefreshToken[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  meetings Meeting[]
+  employees Employee[]
+  authCredentials AuthCredential[]
 }
 
 model Meeting {
@@ -33,7 +34,7 @@ model Meeting {
   startTime DateTime @default(now())
   endTime DateTime?
   
-  status  meetingStatus @default(ONGOING)
+  status  MeetingStatus @default(ONGOING)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt  
 }
@@ -46,18 +47,42 @@ model Employee {
   employeeEmail String  @unique
   designation String 
   department  String
-  meeting Meeting[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  meetings Meeting[]
 }
 
 model RefreshToken {
   id  String @id @default(uuid())
   token String @unique
-  orgId  String @unique
-  organization  Organization  @relation(fields: [orgId],  references: [id], onDelete: Cascade)
+  authId  String @unique
+  authCredentials AuthCredential @relation(fields: [authId], references: [id], onDelete: Cascade)
   expiryDate  DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
-enum meetingStatus {
+
+model AuthCredential{
+  id String @id @default(uuid())
+  email String @unique
+  password  String
+  orgId String
+  role RoleEnum
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  organization  Organization @relation(fields: [orgId],references: [id], onDelete: Cascade)
+  refreshToken RefreshToken[]
+  
+}
+
+
+enum MeetingStatus {
   ONGOING
   COMPLETED
+}
+
+enum RoleEnum {
+  Admin
+  User
 }

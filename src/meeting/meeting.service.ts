@@ -79,6 +79,7 @@ export class MeetingService {
         where: {
           visitorFirstName,
           visitorLastName,
+          status: 'ONGOING',
         },
       });
 
@@ -147,7 +148,7 @@ export class MeetingService {
         status: 'COMPLETED',
       },
     });
-    if (!allCompletedMeetings) {
+    if (!allCompletedMeetings.length) {
       return {
         Success: false,
         Message: 'There are no completed meetings',

@@ -8,19 +8,10 @@ import {
 } from 'class-validator';
 import { RoleEnum } from 'generated/prisma';
 
-export class CreateOrganizationDto {
+export class RegisterUserWithRoleDto {
   @IsString()
   @IsNotEmpty()
-  orgName: string;
-
-  @IsString()
   @IsEmail()
-  @IsNotEmpty()
-  orgEmail: string;
-
-  @IsString()
-  @IsEmail()
-  @IsNotEmpty()
   email: string;
 
   @IsString()
