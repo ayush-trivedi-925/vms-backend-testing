@@ -97,4 +97,49 @@ export class AuthService {
       RefreshToken: refreshToken,
     };
   }
+
+  async refreshAccessToken(refreshToken: string) {
+    const tokenExistsDB = await this.databaseService.refreshToken.findUnique({
+      where: {
+        token: refreshToken,
+      },
+    });
+
+    if (!tokenExistsDB) {
+      throw new BadRequestException('Invalid refresh token.');
+    }
+
+    const userExists = await this.databaseService.authCredential.findUnique({
+      where: {
+        id: tokenExistsDB.authId,
+      },
+    });
+
+    if (!userExists) {
+      throw new BadRequestException('User not found.');
+    }
+
+    const accessToken = this.jwtService.sign({
+      orgId: userExists.orgId,
+      userId: userExists.id,
+    });
+
+    const newRefreshToken = uuid();
+
+    await this.databaseService.refreshToken.update({
+      where: {
+        authId: userExists.id,
+      },
+      data: {
+        token: newRefreshToken,
+      },
+    });
+
+    return {
+      Success: true,
+      Message: 'Token refreshed.',
+      AccessToken: accessToken,
+      RefreshToken: newRefreshToken,
+    };
+  }
 }

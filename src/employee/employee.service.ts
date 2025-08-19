@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
 import { AddEmployeeDto } from 'src/dto/add-employee.dto';
 
@@ -41,6 +45,36 @@ export class EmployeeService {
       Success: true,
       Message: 'Employee added successfully.',
       EmployeeDetails: employee,
+    };
+  }
+
+  async getAllEmployees(orgId: string) {
+    const orgExists = await this.databaseService.organization.findUnique({
+      where: {
+        id: orgId,
+      },
+    });
+
+    if (!orgExists) {
+      throw new NotFoundException("Organization doesn't exists.");
+    }
+
+    const employees = await this.databaseService.employee.findMany({
+      where: {
+        orgId,
+      },
+    });
+
+    if (!employees.length) {
+      return {
+        Success: true,
+        Message: 'No employees exist.',
+      };
+    }
+
+    return {
+      Success: true,
+      Employees: employees,
     };
   }
 }
