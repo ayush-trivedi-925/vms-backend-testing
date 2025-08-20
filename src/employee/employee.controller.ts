@@ -9,7 +9,11 @@ export class EmployeeController {
   constructor(private readonly employeeService: EmployeeService) {}
   @Post('')
   async addEmployee(@Req() request, @Body() addEmployeeDto: AddEmployeeDto) {
-    return this.employeeService.addEmployee(request.orgId, addEmployeeDto);
+    return this.employeeService.addEmployee(
+      request.orgId,
+      request.role,
+      addEmployeeDto,
+    );
   }
 
   @Get('')

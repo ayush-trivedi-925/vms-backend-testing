@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
 import { AddEmployeeDto } from 'src/dto/add-employee.dto';
@@ -10,7 +11,12 @@ import { AddEmployeeDto } from 'src/dto/add-employee.dto';
 export class EmployeeService {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  async addEmployee(orgId, addEmployeeDto: AddEmployeeDto) {
+  async addEmployee(orgId, role, addEmployeeDto: AddEmployeeDto) {
+    if (role !== 'SuperAdmin') {
+      throw new UnauthorizedException(
+        "This role doesn't have permission to access this end-point.",
+      );
+    }
     const { employeeName, employeeEmail, designation, department } =
       addEmployeeDto;
     const orgExists = await this.databaseService.organization.findUnique({

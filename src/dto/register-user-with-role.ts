@@ -12,6 +12,11 @@ export class RegisterUserWithRoleDto {
   @IsString()
   @IsNotEmpty()
   @IsEmail()
+  orgId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @IsEmail()
   email: string;
 
   @IsString()

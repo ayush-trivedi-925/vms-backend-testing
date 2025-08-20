@@ -2,7 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
-  UseGuards,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
 import { CreateMeetingDto } from 'src/dto/create-meeting.dto';
@@ -11,7 +11,11 @@ import { EndMeetingDto } from 'src/dto/end-meeting.dto';
 @Injectable()
 export class MeetingService {
   constructor(private readonly databaseService: DatabaseService) {}
-  async creatMeeting(orgId: string, createMeetingDto: CreateMeetingDto) {
+  async creatMeeting(
+    orgId: string,
+    role: string,
+    createMeetingDto: CreateMeetingDto,
+  ) {
     const {
       visitorFirstName,
       visitorLastName,
@@ -20,6 +24,12 @@ export class MeetingService {
       reasonOfVisit,
       hostId,
     } = createMeetingDto;
+
+    if (role !== 'Admin') {
+      throw new UnauthorizedException(
+        "This role doesn't have permission to access this end-point.",
+      );
+    }
     try {
       const orgExists = await this.databaseService.organization.findUnique({
         where: {
@@ -71,8 +81,13 @@ export class MeetingService {
     }
   }
 
-  async endMeeting(endmeetingDto: EndMeetingDto) {
+  async endMeeting(role: string, endmeetingDto: EndMeetingDto) {
     const { visitorFirstName, visitorLastName } = endmeetingDto;
+    if (role !== 'Admin') {
+      throw new UnauthorizedException(
+        "This role doesn't have permission to access this end-point.",
+      );
+    }
 
     try {
       const meetingExists = await this.databaseService.meeting.findMany({
@@ -121,7 +136,12 @@ export class MeetingService {
     }
   }
 
-  async onGoingMeetings(orgId: string) {
+  async onGoingMeetings(orgId: string, role: string) {
+    if (role !== 'SuperAdmin') {
+      throw new UnauthorizedException(
+        "This role doesn't have permission to access this end-point.",
+      );
+    }
     const allOnGoingMeetings = await this.databaseService.meeting.findMany({
       where: {
         orgId,
@@ -141,7 +161,12 @@ export class MeetingService {
     };
   }
 
-  async completedMeetings(orgId: string) {
+  async completedMeetings(orgId: string, role: string) {
+    if (role !== 'SuperAdmin') {
+      throw new UnauthorizedException(
+        "This role doesn't have permission to access this end-point.",
+      );
+    }
     const allCompletedMeetings = await this.databaseService.meeting.findMany({
       where: {
         orgId,

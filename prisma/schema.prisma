@@ -83,6 +83,6 @@ enum MeetingStatus {
 }
 
 enum RoleEnum {
+  SuperAdmin
   Admin
-  User
 }

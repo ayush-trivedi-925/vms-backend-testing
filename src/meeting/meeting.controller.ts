@@ -10,20 +10,24 @@ export class MeetingController {
   constructor(private readonly meetingService: MeetingService) {}
   @Post('check-in')
   async createMeeting(@Req() req, @Body() createMeetingDto: CreateMeetingDto) {
-    return this.meetingService.creatMeeting(req.orgId, createMeetingDto);
+    return this.meetingService.creatMeeting(
+      req.orgId,
+      req.role,
+      createMeetingDto,
+    );
   }
 
   @Post('check-out')
-  async endMeeting(@Body() endMeetingDto: EndMeetingDto) {
-    return this.meetingService.endMeeting(endMeetingDto);
+  async endMeeting(@Req() req, @Body() endMeetingDto: EndMeetingDto) {
+    return this.meetingService.endMeeting(req.role, endMeetingDto);
   }
   @Get('complete')
   async getAllCompletedMeetings(@Req() req) {
-    return this.meetingService.completedMeetings(req.orgId);
+    return this.meetingService.completedMeetings(req.orgId, req.role);
   }
 
   @Get('on-going')
   async getAllOnGoingMeetings(@Req() req) {
-    return this.meetingService.onGoingMeetings(req.orgId);
+    return this.meetingService.onGoingMeetings(req.orgId, req.role);
   }
 }

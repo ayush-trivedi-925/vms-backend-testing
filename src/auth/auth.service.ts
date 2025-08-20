@@ -33,11 +33,8 @@ export class AuthService {
     });
   }
 
-  async registerUserWithRole(
-    orgId,
-    registerUserWithRoleDto: RegisterUserWithRoleDto,
-  ) {
-    const { email, password, role } = registerUserWithRoleDto;
+  async registerUserWithRole(registerUserWithRoleDto: RegisterUserWithRoleDto) {
+    const { email, password, role, orgId } = registerUserWithRoleDto;
 
     const userExists = await this.databaseService.authCredential.findUnique({
       where: {
@@ -85,6 +82,7 @@ export class AuthService {
     const accessToken = await this.jwtService.sign({
       userId: userExists.id,
       orgId: userExists.orgId,
+      role: userExists.role,
     });
 
     const refreshToken = uuid();
@@ -122,6 +120,7 @@ export class AuthService {
     const accessToken = this.jwtService.sign({
       orgId: userExists.orgId,
       userId: userExists.id,
+      role: userExists.role,
     });
 
     const newRefreshToken = uuid();
