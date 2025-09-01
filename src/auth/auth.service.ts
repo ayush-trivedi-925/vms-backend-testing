@@ -22,7 +22,7 @@ export class AuthService {
     const normalizedEmail = email.toLowerCase().trim();
 
     const rootAlreadyExists =
-      await this.databaseService.authCredential.findFirst({
+      await this.databaseService.userCredential.findFirst({
         where: {
           role: 'Root',
         },
@@ -32,7 +32,7 @@ export class AuthService {
       throw new BadRequestException('Root user already exists.');
     }
 
-    const emailInUse = await this.databaseService.authCredential.findUnique({
+    const emailInUse = await this.databaseService.userCredential.findUnique({
       where: {
         email: normalizedEmail,
       },
@@ -43,7 +43,7 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const onlyRootUser = await this.databaseService.authCredential.create({
+    const onlyRootUser = await this.databaseService.userCredential.create({
       data: {
         email: normalizedEmail,
         password: hashedPassword,

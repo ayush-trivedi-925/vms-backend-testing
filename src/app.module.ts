@@ -11,6 +11,8 @@ import { AuthService } from './auth/auth.service';
 import { AuthModule } from './auth/auth.module';
 import { StaffMemberModule } from './staff-member/staff-member.module';
 import { VisitModule } from './visit/visit.module';
+import { SystemModule } from './system/system.module';
+import { ServiceController } from './service/service.controller';
 import config from './config/config';
 
 @Module({
@@ -38,8 +40,9 @@ import config from './config/config';
     AuthModule,
     StaffMemberModule,
     VisitModule,
+    SystemModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, ServiceController],
   providers: [AppService, AuthService],
 })
 export class AppModule {}

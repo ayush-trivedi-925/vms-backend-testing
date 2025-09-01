@@ -56,8 +56,10 @@ model Staff {
 model RefreshToken {
   id  String @id @default(uuid())
   token String @unique
-  userId  String 
-  userCredentials UserCredential @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String?
+  userCredentials UserCredential? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  systemId  String?
+  systemCredentials SystemCredential? @relation(fields: [systemId], references: [id], onDelete: Cascade)
   expiryDate  DateTime
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -84,6 +86,7 @@ model SystemCredential {
   organization  Organization @relation(fields: [orgId],references: [id], onDelete: Cascade)
   email String @unique
   password  String
+  refreshToken  RefreshToken[]
 }
 
 

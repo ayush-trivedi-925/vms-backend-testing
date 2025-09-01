@@ -12,7 +12,7 @@ export class VisitService {
   constructor(private readonly databaseService: DatabaseService) {}
   async startVisit(
     orgId: string,
-    userId: string,
+    systemId: string,
     startVisitDto: StartVisitDto,
   ) {
     const { fullName, email, visitorOrganization, reasonOfVisit, staffId } =
@@ -21,7 +21,7 @@ export class VisitService {
     const systemCredentialsExists =
       await this.databaseService.systemCredential.findUnique({
         where: {
-          id: userId,
+          id: systemId,
         },
         include: {
           organization: true,
@@ -95,14 +95,14 @@ export class VisitService {
     };
   }
 
-  async endVisit(orgId: string, userId: string, endVisitDto: EndVisitDto) {
+  async endVisit(orgId: string, systemId: string, endVisitDto: EndVisitDto) {
     const { fullName, email } = endVisitDto;
     const normalizedEmail = email.toLowerCase().trim();
 
     const systemCredentialsExists =
       await this.databaseService.systemCredential.findUnique({
         where: {
-          id: userId,
+          id: systemId,
         },
         include: {
           organization: true,
@@ -143,7 +143,7 @@ export class VisitService {
     return {
       success: true,
       message: `${fullName} has checked-out at ${new Date().toLocaleString()}.`,
-      UpdatedVisitStatus: updatedVisitStatus,
+      updatedVisitStatus: updatedVisitStatus,
     };
   }
 
@@ -171,7 +171,7 @@ export class VisitService {
 
     return {
       success: true,
-      AllOnGoingVisits: allOnGoingVisits,
+      allOnGoingVisits: allOnGoingVisits,
     };
   }
 
@@ -199,7 +199,7 @@ export class VisitService {
 
     return {
       success: true,
-      AllCompletedVisits: allCompletedVisits,
+      allCompletedVisits: allCompletedVisits,
     };
   }
 }
