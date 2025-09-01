@@ -147,6 +147,9 @@ export class MeetingService {
         orgId,
         status: 'ONGOING',
       },
+      include: {
+        employee: true,
+      },
     });
 
     if (!allOnGoingMeetings.length) {
@@ -155,6 +158,7 @@ export class MeetingService {
         Message: 'There are no current on-going meetings.',
       };
     }
+
     return {
       Success: true,
       AllOnGoingMeetings: allOnGoingMeetings,
@@ -171,6 +175,9 @@ export class MeetingService {
       where: {
         orgId,
         status: 'COMPLETED',
+      },
+      include: {
+        employee: true,
       },
     });
     if (!allCompletedMeetings.length) {

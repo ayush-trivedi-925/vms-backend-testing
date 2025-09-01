@@ -8,6 +8,7 @@ import { DatabaseService } from 'src/database/database.service';
 import { RegisterUserWithRoleDto } from 'src/dto/register-user-with-role';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuid } from 'uuid';
+import { RegisterRootDto } from 'src/dto/register-root.dto';
 
 @Injectable()
 export class AuthService {
@@ -16,21 +17,49 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async upsertRefreshToken(refreshToken: string, authId: string) {
-    await this.databaseService.refreshToken.upsert({
+  async registerRootUser(registeRootDto: RegisterRootDto) {
+    const { email, password } = registeRootDto;
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const rootAlreadyExists =
+      await this.databaseService.authCredential.findFirst({
+        where: {
+          role: 'Root',
+        },
+      });
+
+    if (rootAlreadyExists) {
+      throw new BadRequestException('Root user already exists.');
+    }
+
+    const emailInUse = await this.databaseService.authCredential.findUnique({
       where: {
-        authId,
-      },
-      update: {
-        token: refreshToken,
-        expiryDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
-      },
-      create: {
-        token: refreshToken,
-        authId,
-        expiryDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+        email: normalizedEmail,
       },
     });
+    if (emailInUse) {
+      throw new BadRequestException('Email currently in use.');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const onlyRootUser = await this.databaseService.authCredential.create({
+      data: {
+        email: normalizedEmail,
+        password: hashedPassword,
+        role: 'Root',
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Root user have been created.',
+      rootDetails: {
+        email: onlyRootUser.email,
+        role: onlyRootUser.role,
+        createdAt: onlyRootUser.createdAt,
+      },
+    };
   }
 
   async registerUserWithRole(registerUserWithRoleDto: RegisterUserWithRoleDto) {
@@ -93,6 +122,7 @@ export class AuthService {
       Message: 'User logged in.',
       AccessToken: accessToken,
       RefreshToken: refreshToken,
+      Role: userExists.role,
     };
   }
 
