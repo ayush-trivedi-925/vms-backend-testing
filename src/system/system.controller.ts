@@ -1,10 +1,12 @@
-import { Body, Controller, Get, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { SystemService } from './system.service';
 import { RegisterSystemUserDto } from 'src/dto/register-system-user.dto';
+import { AuthGuard } from 'src/guard/auth.guard';
 
 @Controller('system')
 export class SystemController {
   constructor(private readonly systemService: SystemService) {}
+  @UseGuards(AuthGuard)
   @Post('register')
   async registerSystemUser(
     @Req() req,
@@ -28,6 +30,7 @@ export class SystemController {
     return this.systemService.refreshSystemAccessToken(data.token);
   }
 
+  @UseGuards(AuthGuard)
   @Get('')
   async getAllSystemAccounts(@Req() req) {
     return this.systemService.getAllSytemUser(req.orgId, req.role);

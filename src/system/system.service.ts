@@ -99,6 +99,7 @@ export class SystemService {
     const accessToken = await this.jwtService.sign({
       systemId: systemAccountExists.id,
       orgId: systemAccountExists.orgId,
+      role: systemAccountExists.role,
     });
     const refreshToken = crypto.randomUUID();
     await this.databaseService.refreshToken.create({
@@ -135,6 +136,7 @@ export class SystemService {
     const accessToken = await this.jwtService.sign({
       systemId: tokenExists.systemCredentials?.id,
       orgId: tokenExists.systemCredentials?.orgId,
+      role: tokenExists.systemCredentials?.role,
     });
 
     // Update refresh token
@@ -175,6 +177,10 @@ export class SystemService {
       {
         where: {
           orgId,
+        },
+        select: {
+          id: true,
+          email: true,
         },
       },
     );

@@ -160,6 +160,9 @@ export class VisitService {
         orgId,
         status: 'ONGOING',
       },
+      include: {
+        staff: true,
+      },
     });
 
     if (allOnGoingVisits.length === 0) {
@@ -187,6 +190,9 @@ export class VisitService {
       where: {
         orgId,
         status: 'COMPLETED',
+      },
+      include: {
+        staff: true,
       },
     });
 

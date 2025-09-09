@@ -26,6 +26,7 @@ export class AuthGuard implements CanActivate {
       request.orgId = decode.orgId;
       request.userId = decode.userId;
       request.role = decode.role;
+      request.systemId = decode.systemId;
       return true;
     } catch (error) {
       Logger.error(error.message);

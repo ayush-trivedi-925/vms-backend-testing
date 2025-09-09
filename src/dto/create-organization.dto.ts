@@ -1,41 +1,11 @@
-import {
-  IsEmail,
-  IsEnum,
-  IsNotEmpty,
-  IsString,
-  Matches,
-  MinLength,
-} from 'class-validator';
-import { RoleEnum } from 'generated/prisma';
+import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 
 export class CreateOrganizationDto {
   @IsString()
   @IsNotEmpty()
-  orgName: string;
+  name: string;
 
   @IsString()
   @IsEmail()
-  @IsNotEmpty()
-  orgEmail: string;
-
-  @IsString()
-  @IsEmail()
-  @IsNotEmpty()
   email: string;
-
-  @IsString()
-  @MinLength(6, { message: 'Password must be at least 6 characters long' })
-  @Matches(/(?=.*[A-Z])/, {
-    message: 'Password must contain at least one uppercase letter',
-  })
-  @Matches(/(?=.*\d)/, {
-    message: 'Password must contain at least one number',
-  })
-  @Matches(/(?=.*[!@#$%^&*])/, {
-    message: 'Password must contain at least one special character (!@#$%^&*)',
-  })
-  password: string;
-
-  @IsEnum(RoleEnum, { message: 'Role must be either Admin or User' })
-  role: RoleEnum;
 }

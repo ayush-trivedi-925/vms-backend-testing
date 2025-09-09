@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { DatabaseService } from 'src/database/database.service';
-import { RegisterUserWithRoleDto } from 'src/dto/register-user-with-role';
+
 import * as bcrypt from 'bcrypt';
 import { v4 as uuid } from 'uuid';
 import { RegisterRootDto } from 'src/dto/register-root.dto';
@@ -48,12 +48,13 @@ export class AuthService {
         email: normalizedEmail,
         password: hashedPassword,
         role: 'Root',
+        firstTimeLogin: false,
       },
     });
 
     return {
       success: true,
-      message: 'Root user have been created.',
+      message: 'Root user has been created.',
       rootDetails: {
         email: onlyRootUser.email,
         role: onlyRootUser.role,
@@ -62,68 +63,123 @@ export class AuthService {
     };
   }
 
-  async registerUserWithRole(registerUserWithRoleDto: RegisterUserWithRoleDto) {
-    const { email, password, role, orgId } = registerUserWithRoleDto;
+  // async registerUserWithRole(registerUserWithRoleDto: RegisterUserWithRoleDto) {
+  //   const { email, password, role, orgId } = registerUserWithRoleDto;
 
-    const userExists = await this.databaseService.authCredential.findUnique({
-      where: {
-        email,
-      },
-    });
-    if (userExists) {
-      throw new BadRequestException('User exists already.');
-    }
-    const hashedPassword = await bcrypt.hash(password, 10);
+  //   const userExists = await this.databaseService.userCredential.findUnique({
+  //     where: {
+  //       email,
+  //     },
+  //   });
+  //   if (userExists) {
+  //     throw new BadRequestException('User exists already.');
+  //   }
+  //   const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await this.databaseService.authCredential.create({
-      data: {
-        email,
-        password: hashedPassword,
-        role,
-        orgId,
-      },
-    });
+  //   const user = await this.databaseService.userCredential.create({
+  //     data: {
+  //       email,
+  //       password: hashedPassword,
+  //       role,
+  //       orgId,
+  //     },
+  //   });
 
-    return {
-      Success: true,
-      Message: 'User has been registered successfully.',
-      UserDetails: user,
-    };
-  }
+  //   return {
+  //     Success: true,
+  //     Message: 'User has been registered successfully.',
+  //     UserDetails: user,
+  //   };
+  // }
 
-  async loginUser(email: string, password: string) {
-    const userExists = await this.databaseService.authCredential.findUnique({
-      where: {
-        email,
-      },
+  async loginUser(email: string, password: string, newPassword?: string) {
+    let user = await this.databaseService.userCredential.findUnique({
+      where: { email },
     });
 
-    if (!userExists) {
-      throw new NotFoundException("User doesn't exists.");
+    if (!user) {
+      throw new NotFoundException("User doesn't exist.");
     }
 
-    const verifyPassword = await bcrypt.compare(password, userExists.password);
+    // First-time login flow
+    if (user.firstTimeLogin) {
+      const verifyPassword = await bcrypt.compare(password, user.password);
+      if (!verifyPassword) {
+        throw new BadRequestException('Invalid credentials.');
+      }
 
-    if (!verifyPassword) {
-      throw new BadRequestException('Invalid credentials.');
+      if (!newPassword) {
+        return {
+          success: false,
+          firstTimeLogin: true,
+          message: 'First time login. Please provide new password.',
+        };
+      }
+
+      // Change password & mark as not first time
+      await this.changePassword(user.id, newPassword);
+
+      await this.databaseService.userCredential.update({
+        where: { id: user.id },
+        data: { firstTimeLogin: false },
+      });
+
+      // re-fetch updated user
+      user = await this.databaseService.userCredential.findUnique({
+        where: { id: user.id },
+      });
+
+      if (!user) {
+        throw new NotFoundException("User doesn't exist");
+      }
+
+      // double-check new password hash
+      const verifyNewPassword = await bcrypt.compare(
+        newPassword,
+        user.password,
+      );
+      if (!verifyNewPassword) {
+        throw new BadRequestException('Password update failed.');
+      }
+    } else {
+      // Normal login flow
+      const verifyPassword = await bcrypt.compare(password, user.password);
+      if (!verifyPassword) {
+        throw new BadRequestException('Invalid credentials.');
+      }
     }
 
-    const accessToken = await this.jwtService.sign({
-      userId: userExists.id,
-      orgId: userExists.orgId,
-      role: userExists.role,
+    const accessToken = this.jwtService.sign({
+      userId: user.id,
+      orgId: user.orgId,
+      role: user.role,
     });
 
     const refreshToken = uuid();
+    await this.databaseService.refreshToken.create({
+      data: {
+        userId: user.id,
+        token: refreshToken,
+        expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      },
+    });
 
-    await this.upsertRefreshToken(refreshToken, userExists.id);
     return {
-      Success: true,
-      Message: 'User logged in.',
-      AccessToken: accessToken,
-      RefreshToken: refreshToken,
-      Role: userExists.role,
+      success: true,
+      message: 'Login successful.',
+      accessToken,
+      refreshToken,
+      role: user.role,
     };
+  }
+
+  async changePassword(userId: string, newPassword: string) {
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await this.databaseService.userCredential.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
   }
 
   async refreshAccessToken(refreshToken: string) {
@@ -137,9 +193,17 @@ export class AuthService {
       throw new BadRequestException('Invalid refresh token.');
     }
 
-    const userExists = await this.databaseService.authCredential.findUnique({
+    if (tokenExistsDB.expiryDate < new Date()) {
+      throw new BadRequestException('Refresh token expired.');
+    }
+
+    if (!tokenExistsDB.userId) {
+      throw new BadRequestException('User ID must exist.');
+    }
+
+    const userExists = await this.databaseService.userCredential.findUnique({
       where: {
-        id: tokenExistsDB.authId,
+        id: tokenExistsDB.userId,
       },
     });
 
@@ -157,18 +221,19 @@ export class AuthService {
 
     await this.databaseService.refreshToken.update({
       where: {
-        authId: userExists.id,
+        id: tokenExistsDB.id,
       },
       data: {
         token: newRefreshToken,
+        expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       },
     });
 
     return {
-      Success: true,
-      Message: 'Token refreshed.',
-      AccessToken: accessToken,
-      RefreshToken: newRefreshToken,
+      success: true,
+      message: 'Token refreshed.',
+      accessToken: accessToken,
+      refreshToken: newRefreshToken,
     };
   }
 }
