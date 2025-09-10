@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { DatabaseService } from 'src/database/database.service';
@@ -133,6 +134,12 @@ export class AuthService {
         throw new NotFoundException("User doesn't exist");
       }
 
+      if (user.accountStatus === 'Disabled' || user.role === 'Staff') {
+        throw new UnauthorizedException(
+          "You don't have permission to access dashboard",
+        );
+      }
+
       // double-check new password hash
       const verifyNewPassword = await bcrypt.compare(
         newPassword,
@@ -142,6 +149,11 @@ export class AuthService {
         throw new BadRequestException('Password update failed.');
       }
     } else {
+      if (user.accountStatus === 'Disabled' || user.role === 'Staff') {
+        throw new UnauthorizedException(
+          "You don't have permission to access dashboard",
+        );
+      }
       // Normal login flow
       const verifyPassword = await bcrypt.compare(password, user.password);
       if (!verifyPassword) {

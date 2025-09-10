@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
 import { CreateOrganizationDto } from 'src/dto/create-organization.dto';
+import { EditOrganizationDto } from 'src/dto/edit-organization.dto';
 
 @Injectable()
 export class OrganizationService {
@@ -21,7 +22,8 @@ export class OrganizationService {
         'Only root user can create an organization.',
       );
     }
-    const { name, email } = createOrganizationDto;
+    const { name, email, address, contactNumber, contactPerson, gst } =
+      createOrganizationDto;
     const normalizedEmail = email.toLowerCase().trim();
     const organizationExists =
       await this.databaseService.organization.findUnique({
@@ -37,6 +39,10 @@ export class OrganizationService {
       data: {
         name,
         email: normalizedEmail,
+        address,
+        contactNumber,
+        contactPerson,
+        gst: gst || null,
       },
     });
 
@@ -44,6 +50,67 @@ export class OrganizationService {
       success: true,
       message: 'Organization has been created successfully.',
       organizationDetails: organization,
+    };
+  }
+
+  async editOrganizationDetails(
+    orgId,
+    role,
+    editOrganizationDto: EditOrganizationDto,
+    userId,
+  ) {
+    const allowedRoles = ['Root', 'SuperAdmin'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException(
+        'Only root and superadmin are allowed to edit organization details.',
+      );
+    }
+    const targetOrgId = orgId;
+    if (!targetOrgId) {
+      throw new BadRequestException('Organization ID is required.');
+    }
+
+    const orgExists = await this.databaseService.organization.findUnique({
+      where: {
+        id: targetOrgId,
+      },
+    });
+
+    if (!orgExists) {
+      throw new NotFoundException("Organization doesn't exists.");
+    }
+
+    if (role === 'SuperAdmin') {
+      const superAdminExist =
+        await this.databaseService.userCredential.findUnique({
+          where: {
+            id: userId,
+          },
+        });
+
+      if (!superAdminExist) {
+        throw new BadRequestException(
+          'Invalid request. SuperAdmin does not exists.',
+        );
+      }
+      // If superadmin belongs to the perticular organization
+      if (superAdminExist.orgId !== orgExists.id) {
+        throw new UnauthorizedException(
+          'Unauthorized updated attempt. SuperAdmin belongs to different organization.',
+        );
+      }
+    }
+
+    await this.databaseService.organization.update({
+      where: {
+        id: targetOrgId,
+      },
+      data: { ...editOrganizationDto },
+    });
+
+    return {
+      success: true,
+      message: 'Organizationd details have been upated successfully.',
     };
   }
 

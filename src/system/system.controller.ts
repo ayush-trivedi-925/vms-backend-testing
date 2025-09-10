@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { SystemService } from './system.service';
 import { RegisterSystemUserDto } from 'src/dto/register-system-user.dto';
 import { AuthGuard } from 'src/guard/auth.guard';
@@ -34,5 +43,15 @@ export class SystemController {
   @Get('')
   async getAllSystemAccounts(@Req() req) {
     return this.systemService.getAllSytemUser(req.orgId, req.role);
+  }
+  @UseGuards(AuthGuard)
+  @Delete(':systemId')
+  async deleteSystemAccount(@Param('systemId') systemId: string, @Req() req) {
+    return this.systemService.deleteSystemAccount(
+      systemId,
+      req.orgId,
+      req.userId,
+      req.role,
+    );
   }
 }

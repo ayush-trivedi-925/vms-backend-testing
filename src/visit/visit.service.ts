@@ -6,10 +6,14 @@ import {
 import { DatabaseService } from 'src/database/database.service';
 import { EndVisitDto } from 'src/dto/end-visit.dto';
 import { StartVisitDto } from 'src/dto/start-visit.dto';
+import { MailService } from 'src/service/mail/mail.service';
 
 @Injectable()
 export class VisitService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly mailService: MailService,
+  ) {}
   async startVisit(
     orgId: string,
     systemId: string,
@@ -18,6 +22,7 @@ export class VisitService {
     const { fullName, email, visitorOrganization, reasonOfVisit, staffId } =
       startVisitDto;
     const normalizedEmail = email.toLowerCase().trim();
+    fullName.trim();
     const systemCredentialsExists =
       await this.databaseService.systemCredential.findUnique({
         where: {
@@ -75,6 +80,9 @@ export class VisitService {
         staff: true,
       },
     });
+
+    await this.mailService.visitStart(normalizedEmail);
+    await this.mailService.visitStart(staffExists.email);
 
     return {
       success: true,
@@ -140,6 +148,9 @@ export class VisitService {
         staff: true,
       },
     });
+
+    await this.mailService.visitEnd(normalizedEmail);
+    await this.mailService.visitEnd(updatedVisitStatus.staff.email);
     return {
       success: true,
       message: `${fullName} has checked-out at ${new Date().toLocaleString()}.`,

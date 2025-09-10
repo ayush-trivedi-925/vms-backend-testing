@@ -200,4 +200,52 @@ export class SystemService {
       systemAccounts,
     };
   }
+
+  async deleteSystemAccount(systemId, orgId, userId, role) {
+    const allowedRoles = ['SuperAdmin'];
+    if (!allowedRoles.includes(role)) {
+      throw new BadRequestException('Only superadmin can add system accounts.');
+    }
+    const organizationExists =
+      await this.databaseService.organization.findUnique({
+        where: {
+          id: orgId,
+        },
+      });
+
+    if (!organizationExists) {
+      throw new BadRequestException("Organization doesn't exists.");
+    }
+
+    const userExists = await this.databaseService.userCredential.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+    if (!userExists) {
+      throw new BadRequestException("User doesn't exists.");
+    }
+
+    const sytemAccountExists =
+      await this.databaseService.systemCredential.findUnique({
+        where: {
+          id: systemId,
+        },
+      });
+
+    if (!sytemAccountExists) {
+      throw new NotFoundException('System account does not exists.');
+    }
+
+    await this.databaseService.systemCredential.delete({
+      where: {
+        id: systemId,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'System account deleted successfully.',
+    };
+  }
 }

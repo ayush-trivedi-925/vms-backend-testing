@@ -1,4 +1,5 @@
 import { IsEmail, IsOptional, IsString, IsEnum } from 'class-validator';
+import { AccountStatusEnum, MemberRoleEnum } from 'generated/prisma';
 
 export class EditStaffMemberDto {
   @IsOptional()
@@ -10,8 +11,8 @@ export class EditStaffMemberDto {
   email?: string;
 
   @IsOptional()
-  @IsEnum(['SuperAdmin', 'Admin', 'Staff'])
-  role?: 'SuperAdmin' | 'Admin' | 'Staff';
+  @IsEnum(MemberRoleEnum)
+  role?: MemberRoleEnum;
 
   @IsOptional()
   @IsString()
@@ -20,4 +21,8 @@ export class EditStaffMemberDto {
   @IsOptional()
   @IsString()
   designation?: string;
+
+  @IsOptional()
+  @IsEnum(AccountStatusEnum)
+  accountStatus?: AccountStatusEnum;
 }

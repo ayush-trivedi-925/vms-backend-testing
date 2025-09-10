@@ -213,7 +213,10 @@ export class StaffService {
     }
 
     // Check if updating to SuperAdmin
-    if (editStaffMemberDto.role === 'SuperAdmin') {
+    if (
+      editStaffMemberDto.role === 'SuperAdmin' &&
+      staff.role !== 'SuperAdmin' // prevent blocking if they are already superadmin
+    ) {
       const existingSuperAdmin =
         await this.databaseService.userCredential.findFirst({
           where: {
@@ -231,6 +234,7 @@ export class StaffService {
 
     // CASE 1: Staff already linked to UserCredential
     if (staff.userId) {
+      // Update Staff record
       await this.databaseService.staff.update({
         where: { id: staffId },
         data: {
@@ -238,11 +242,39 @@ export class StaffService {
         },
       });
 
+      // Prepare update for UserCredential
+      const userUpdateData: any = {
+        role: editStaffMemberDto.role as AuthRoleEnum,
+      };
+
+      // If demoted from Admin/SuperAdmin → Staff, disable account
+      if (
+        (staff.role === 'Admin' || staff.role === 'SuperAdmin') &&
+        editStaffMemberDto.role === 'Staff'
+      ) {
+        await this.databaseService.userCredential.update({
+          where: { id: staff.userId },
+          data: {
+            accountStatus: 'Disabled',
+          },
+        });
+      }
+      // If demoted from Staff → Admin/SuperAdmin, Active account
+      if (
+        (staff.role === 'Staff' && editStaffMemberDto.role === 'Admin') ||
+        editStaffMemberDto.role === 'SuperAdmin'
+      ) {
+        await this.databaseService.userCredential.update({
+          where: { id: staff.userId },
+          data: {
+            accountStatus: 'Active',
+          },
+        });
+      }
+
       await this.databaseService.userCredential.update({
         where: { id: staff.userId },
-        data: {
-          role: editStaffMemberDto.role as AuthRoleEnum, // Sync role in UserCredential
-        },
+        data: userUpdateData,
       });
 
       return { success: true, message: 'Staff details updated successfully.' };
@@ -251,7 +283,8 @@ export class StaffService {
     // CASE 2: Staff does not have a linked UserCredential
     const oneTimePassword = 'SegueIT@123';
     const hashedPassword = await bcrypt.hash(oneTimePassword, 10);
-    // First update the Staff record
+
+    // Update staff record
     await this.databaseService.staff.update({
       where: { id: staffId },
       data: {
@@ -259,8 +292,8 @@ export class StaffService {
       },
     });
 
-    // Then create the UserCredential
-    const newUser = await this.databaseService.userCredential.create({
+    // Create a new UserCredential (active by default)
+    await this.databaseService.userCredential.create({
       data: {
         orgId: targetOrgId,
         email: staff.email,
@@ -272,6 +305,7 @@ export class StaffService {
         },
       },
     });
+
     return {
       success: true,
       message: 'Staff updated and one-time password sent to email.',
