@@ -78,11 +78,14 @@ export class VisitService {
       },
       include: {
         staff: true,
+        organization: true,
       },
     });
 
-    await this.mailService.visitStart(normalizedEmail);
-    await this.mailService.visitStart(staffExists.email);
+    console.log(startVisitDetails);
+
+    await this.mailService.VisitStartToVisitor(startVisitDetails);
+    await this.mailService.VisitStartToHost(startVisitDetails);
 
     return {
       success: true,
@@ -146,11 +149,12 @@ export class VisitService {
       },
       include: {
         staff: true,
+        organization: true,
       },
     });
 
-    await this.mailService.visitEnd(normalizedEmail);
-    await this.mailService.visitEnd(updatedVisitStatus.staff.email);
+    await this.mailService.VisitEndToVisitor(updatedVisitStatus);
+    await this.mailService.VisitEndToHost(updatedVisitStatus);
     return {
       success: true,
       message: `${fullName} has checked-out at ${new Date().toLocaleString()}.`,
