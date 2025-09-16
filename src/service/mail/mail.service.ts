@@ -29,7 +29,7 @@ export class MailService {
         <p>Your visitor has arrived, Visitor's details are:</p>
         <p>Name: ${details.fullName}</p>
         <p>Email: ${details.email}</p>
-        <p>Organization: ${details.organization.name}</p>
+        <p>Organization: ${details.visitorOrganization}</p>
         <p>Purpose: ${details.reasonOfVisit}</p>
 
         <p>Please proceed to the reception to greet your visitor.</p>
@@ -101,7 +101,7 @@ export class MailService {
       <p>Visitor Details:</p>
       <p>Name: ${details.fullName}</p>
       <p>Email: ${details.email}</p>
-      <p>Organization: ${details.organization.name}</p>
+      <p>Organization: ${details.visitorOrganization}</p>
       <p>Purpose: ${details.reasonOfVisit}</p>
       <p>Check-in Time: ${checkInFormattedTime}</p>
       <p>Check-out Time: ${formattedTime}</p>

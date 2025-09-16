@@ -106,26 +106,35 @@ export class VisitService {
     };
   }
 
-  async endVisit(orgId: string, systemId: string, endVisitDto: EndVisitDto) {
+  async endVisit(
+    orgId: string,
+    endVisitDto: EndVisitDto,
+    systemId?: string,
+    role?: string,
+  ) {
+    const allowedRoles = ['SuperAdmin', 'Admin'];
+
     const { fullName, email } = endVisitDto;
     const normalizedEmail = email.toLowerCase().trim();
 
-    const systemCredentialsExists =
-      await this.databaseService.systemCredential.findUnique({
-        where: {
-          id: systemId,
-        },
-        include: {
-          organization: true,
-        },
-      });
+    if (systemId) {
+      const systemCredentialsExists =
+        await this.databaseService.systemCredential.findUnique({
+          where: {
+            id: systemId,
+          },
+          include: {
+            organization: true,
+          },
+        });
 
-    if (!systemCredentialsExists) {
-      throw new BadRequestException('Invalid user id.');
-    }
+      if (!systemCredentialsExists) {
+        throw new BadRequestException('Invalid user id.');
+      }
 
-    if (systemCredentialsExists.organization.id !== orgId) {
-      throw new BadRequestException('Invalid credentials.');
+      if (systemCredentialsExists.organization.id !== orgId) {
+        throw new BadRequestException('Invalid credentials.');
+      }
     }
 
     const visitExists = await this.databaseService.visit.findFirst({
@@ -141,6 +150,10 @@ export class VisitService {
       throw new BadRequestException('No such visit is on-going.');
     }
 
+    //Only allow update if role is permitted
+    if (role && !allowedRoles.includes(role)) {
+      throw new BadRequestException('You are not allowed to end this visit.');
+    }
     const updatedVisitStatus = await this.databaseService.visit.update({
       where: { id: visitExists.id },
       data: {
@@ -152,7 +165,6 @@ export class VisitService {
         organization: true,
       },
     });
-
     await this.mailService.VisitEndToVisitor(updatedVisitStatus);
     await this.mailService.VisitEndToHost(updatedVisitStatus);
     return {

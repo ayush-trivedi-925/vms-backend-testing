@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { VisitService } from './visit.service';
 import { StartVisitDto } from 'src/dto/start-visit.dto';
 import { EndVisitDto } from 'src/dto/end-visit.dto';
@@ -15,7 +24,12 @@ export class VisitController {
 
   @Post('check-out')
   async endVisit(@Req() req, @Body() endVisitDto: EndVisitDto) {
-    return this.visitService.endVisit(req.orgId, req.systemId, endVisitDto);
+    return this.visitService.endVisit(
+      req.orgId,
+      endVisitDto,
+      req.systemId ?? null,
+      req.role ?? null,
+    );
   }
 
   @Get('ongoing')
