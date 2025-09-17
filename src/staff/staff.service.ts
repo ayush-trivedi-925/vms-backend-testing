@@ -20,7 +20,7 @@ export class StaffService {
     addStaffMemberDto: AddStaffMemberDto,
     qOrgId?: string,
   ) {
-    const { name, email, designation, department } = addStaffMemberDto;
+    const { name, email, designation, departmentId } = addStaffMemberDto;
     console.log(qOrgId);
     console.log(orgId);
     // Decide which orgId to use
@@ -65,7 +65,7 @@ export class StaffService {
         orgId: targetOrgId,
         name,
         email: normalizedEmail,
-        department,
+        departmentId,
         designation,
       },
     });
@@ -109,6 +109,9 @@ export class StaffService {
 
     const allStaffMembers = await this.databaseService.staff.findMany({
       where: { orgId: targetOrgId },
+      include: {
+        department: true,
+      },
     });
 
     if (allStaffMembers.length === 0) {

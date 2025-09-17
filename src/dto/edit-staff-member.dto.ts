@@ -16,7 +16,7 @@ export class EditStaffMemberDto {
 
   @IsOptional()
   @IsString()
-  department?: string;
+  departmentId?: string;
 
   @IsOptional()
   @IsString()

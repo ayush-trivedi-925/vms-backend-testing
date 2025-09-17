@@ -16,5 +16,5 @@ export class AddStaffMemberDto {
 
   @IsString()
   @IsNotEmpty()
-  department: string;
+  departmentId: string;
 }

@@ -115,7 +115,7 @@ export class VisitService {
         reasonOfVisit,
         hostDetails: {
           name: startVisitDetails.staff.name,
-          department: startVisitDetails.staff.department,
+          department: startVisitDetails.staff.departmentId,
           designation: startVisitDetails.staff.designation,
         },
         checkInTime: startVisitDetails.startTime,
@@ -223,7 +223,11 @@ export class VisitService {
         status: 'ONGOING',
       },
       include: {
-        staff: true,
+        staff: {
+          include: {
+            department: true,
+          },
+        },
       },
     });
 
