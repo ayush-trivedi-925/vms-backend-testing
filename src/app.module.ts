@@ -14,6 +14,8 @@ import { SystemModule } from './system/system.module';
 import { StaffModule } from './staff/staff.module';
 import { OrganizationModule } from './organization/organization.module';
 import config from './config/config';
+import { CloudinaryService } from './media/cloudinary.service';
+import { DepartmentModule } from './department/department.module';
 
 @Module({
   imports: [
@@ -42,8 +44,9 @@ import config from './config/config';
     SystemModule,
     StaffModule,
     OrganizationModule,
+    DepartmentModule,
   ],
   controllers: [AppController],
-  providers: [AppService, AuthService],
+  providers: [AppService, AuthService, CloudinaryService],
 })
 export class AppModule {}

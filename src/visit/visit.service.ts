@@ -6,6 +6,7 @@ import {
 import { DatabaseService } from 'src/database/database.service';
 import { EndVisitDto } from 'src/dto/end-visit.dto';
 import { StartVisitDto } from 'src/dto/start-visit.dto';
+import { CloudinaryService } from 'src/media/cloudinary.service';
 import { MailService } from 'src/service/mail/mail.service';
 
 @Injectable()
@@ -13,16 +14,19 @@ export class VisitService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly mailService: MailService,
+    private readonly cloudinary: CloudinaryService,
   ) {}
   async startVisit(
     orgId: string,
     systemId: string,
     startVisitDto: StartVisitDto,
+    checkInPicture?: Express.Multer.File,
   ) {
+    let imageUrl: string | null = null;
     const { fullName, email, visitorOrganization, reasonOfVisit, staffId } =
       startVisitDto;
     const normalizedEmail = email.toLowerCase().trim();
-    fullName.trim();
+    const normalizedFullName = fullName.trim();
     const systemCredentialsExists =
       await this.databaseService.systemCredential.findUnique({
         where: {
@@ -67,14 +71,27 @@ export class VisitService {
       throw new BadRequestException('Visitor already has an active visit.');
     }
 
+    if (checkInPicture) {
+      try {
+        const uploaded = await this.cloudinary.uploadImage(
+          checkInPicture,
+          'acs',
+        );
+        imageUrl = uploaded['secure_url'];
+      } catch (error) {
+        throw new BadRequestException('Image upload failed');
+      }
+    }
+
     const startVisitDetails = await this.databaseService.visit.create({
       data: {
         orgId,
-        fullName,
+        fullName: normalizedFullName,
         email: normalizedEmail,
         visitorOrganization,
         reasonOfVisit,
         staffId,
+        checkInPicture: imageUrl ?? null,
       },
       include: {
         staff: true,
@@ -111,11 +128,13 @@ export class VisitService {
     endVisitDto: EndVisitDto,
     systemId?: string,
     role?: string,
+    checkOutPicture?: Express.Multer.File,
   ) {
-    const allowedRoles = ['SuperAdmin', 'Admin'];
-
+    const allowedRoles = ['SuperAdmin', 'Admin', 'System'];
+    let imageUrl: string | null = null;
     const { fullName, email } = endVisitDto;
     const normalizedEmail = email.toLowerCase().trim();
+    const normalizedFullName = fullName.trim();
 
     if (systemId) {
       const systemCredentialsExists =
@@ -139,7 +158,7 @@ export class VisitService {
 
     const visitExists = await this.databaseService.visit.findFirst({
       where: {
-        fullName,
+        fullName: normalizedFullName,
         orgId,
         email: normalizedEmail,
         status: 'ONGOING',
@@ -152,13 +171,29 @@ export class VisitService {
 
     //Only allow update if role is permitted
     if (role && !allowedRoles.includes(role)) {
+      console.log('role not permitted');
       throw new BadRequestException('You are not allowed to end this visit.');
     }
+
+    if (checkOutPicture) {
+      try {
+        const uploaded = await this.cloudinary.uploadImage(
+          checkOutPicture,
+          'acs',
+        );
+        imageUrl = uploaded['secure_url'];
+        console.log(imageUrl);
+      } catch (error) {
+        throw new BadRequestException('Image upload failed');
+      }
+    }
+
     const updatedVisitStatus = await this.databaseService.visit.update({
       where: { id: visitExists.id },
       data: {
         status: 'COMPLETED',
         endTime: new Date(),
+        checkOutPicture: imageUrl ?? null,
       },
       include: {
         staff: true,
@@ -169,7 +204,7 @@ export class VisitService {
     await this.mailService.VisitEndToHost(updatedVisitStatus);
     return {
       success: true,
-      message: `${fullName} has checked-out at ${new Date().toLocaleString()}.`,
+      message: `${normalizedFullName} has checked-out at ${new Date().toLocaleString()}.`,
       updatedVisitStatus: updatedVisitStatus,
     };
   }

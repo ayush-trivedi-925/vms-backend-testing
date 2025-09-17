@@ -22,6 +22,7 @@ model Organization {
   staff Staff[]
   authCredentials UserCredential[]
   systemCredentials SystemCredential[]
+  Departments Department[]
 }
 
 model Visit {
@@ -37,6 +38,8 @@ model Visit {
   startTime DateTime @default(now())
   endTime DateTime?
   status  MeetingStatus @default(ONGOING)
+  checkInPicture  String? 
+  checkOutPicture String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt  
 }
@@ -93,6 +96,15 @@ model SystemCredential {
   password  String
   role String @default("System")
   refreshToken  RefreshToken[]
+}
+
+model Department {
+  id  String  @id @default(uuid())
+  orgId String
+  organization  Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name  String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 
