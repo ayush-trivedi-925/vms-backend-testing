@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
@@ -104,6 +105,58 @@ export class DepartmentService {
     return {
       success: true,
       allDepartments: departments,
+    };
+  }
+
+  async deleteDepartment(orgId, userId, role, departmentId, qOrgId?) {
+    const allowedRoles = ['Root', 'SuperAdmin'];
+    const targetOrgId = role === 'Root' && qOrgId ? qOrgId : orgId;
+
+    if (!targetOrgId) {
+      throw new BadRequestException('Organization ID is required.');
+    }
+
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException(
+        'Only root and superadmin can access departments.',
+      );
+    }
+    if (role !== 'Root') {
+      const userExists = await this.databaseService.userCredential.findUnique({
+        where: {
+          id: userId,
+        },
+      });
+
+      if (!userExists) {
+        throw new BadRequestException('Invalid credentials.');
+      }
+      if (userExists.orgId !== targetOrgId) {
+        throw new UnauthorizedException(
+          'User belongs to different organization.',
+        );
+      }
+    }
+
+    const departmentExists = await this.databaseService.department.findUnique({
+      where: {
+        id: departmentId,
+      },
+    });
+
+    if (!departmentExists) {
+      throw new NotFoundException("Department doesn't exists.");
+    }
+
+    await this.databaseService.department.delete({
+      where: {
+        id: departmentId,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Department deleted successfully.',
     };
   }
 }

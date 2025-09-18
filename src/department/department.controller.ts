@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  Param,
   Post,
   Query,
   Req,
@@ -36,6 +38,21 @@ export class DepartmentController {
       req.orgId,
       req.userId,
       req.role,
+      qOrgId ?? null,
+    );
+  }
+
+  @Delete(':departmentId')
+  async deleteDepartment(
+    @Req() req,
+    @Param('departmentId') departmentId: string,
+    @Query('qOrgId') qOrgId?: string,
+  ) {
+    return this.departmentService.deleteDepartment(
+      req.orgId,
+      req.userId,
+      req.role,
+      departmentId,
       qOrgId ?? null,
     );
   }
