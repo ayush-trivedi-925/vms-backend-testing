@@ -16,6 +16,7 @@ import { OrganizationModule } from './organization/organization.module';
 import config from './config/config';
 import { CloudinaryService } from './media/cloudinary.service';
 import { DepartmentModule } from './department/department.module';
+import { ReasonModule } from './reason/reason.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { DepartmentModule } from './department/department.module';
     StaffModule,
     OrganizationModule,
     DepartmentModule,
+    ReasonModule,
   ],
   controllers: [AppController],
   providers: [AppService, AuthService, CloudinaryService],

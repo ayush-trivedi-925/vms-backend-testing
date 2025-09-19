@@ -5,19 +5,20 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
-import { CreateDepartmentDto } from 'src/dto/create-department.dto';
+import { AddReasonDto } from 'src/dto/add-reason.dto';
 
 @Injectable()
-export class DepartmentService {
+export class ReasonService {
   constructor(private readonly databaseService: DatabaseService) {}
-  async createDepartment(
+
+  async addReason(
     orgId,
     userId,
     role,
-    createDepartmentDto: CreateDepartmentDto,
-    qOrgId?,
+    addReasonDto: AddReasonDto,
+    qOrgId?: string,
   ) {
-    const { name } = createDepartmentDto;
+    const { name } = addReasonDto;
     const allowedRoles = ['Root', 'SuperAdmin', 'Admin'];
     const targetOrgId = role === 'Root' && qOrgId ? qOrgId : orgId;
 
@@ -46,20 +47,21 @@ export class DepartmentService {
         );
       }
     }
-    const department = await this.databaseService.department.create({
+
+    const reasonOfVisit = await this.databaseService.reasonOfVisit.create({
       data: {
         orgId: targetOrgId,
         name,
       },
     });
+
     return {
       success: true,
-      message: 'Department added successfully',
-      departmentInfo: department,
+      message: 'Reason added.',
     };
   }
 
-  async getAllDepartments(orgId, userId, role, qOrgId?) {
+  async getAllReasons(orgId, userId, role, qOrgId?) {
     const allowedRoles = ['Root', 'SuperAdmin', 'Admin'];
     const targetOrgId = role === 'Root' && qOrgId ? qOrgId : orgId;
 
@@ -69,7 +71,7 @@ export class DepartmentService {
 
     if (!allowedRoles.includes(role)) {
       throw new UnauthorizedException(
-        'Only root, superadmin and admin can access departments.',
+        'Only root, superadmin and admin can access reaspns of visit.',
       );
     }
     if (role !== 'Root') {
@@ -89,26 +91,26 @@ export class DepartmentService {
       }
     }
 
-    const departments = await this.databaseService.department.findMany({
+    const reasonsOfVisit = await this.databaseService.reasonOfVisit.findMany({
       where: {
         orgId: targetOrgId,
       },
     });
 
-    if (!departments.length) {
+    if (!reasonsOfVisit.length) {
       return {
         success: true,
-        message: 'No departments as of now.',
+        message: 'No reasons of visit as of now.',
       };
     }
 
     return {
       success: true,
-      allDepartments: departments,
+      allReasonsOfVisit: reasonsOfVisit,
     };
   }
 
-  async deleteDepartment(orgId, userId, role, departmentId, qOrgId?) {
+  async deleteReason(orgId, userId, role, reasonId, qOrgId?) {
     const allowedRoles = ['Root', 'SuperAdmin'];
     const targetOrgId = role === 'Root' && qOrgId ? qOrgId : orgId;
 
@@ -118,7 +120,7 @@ export class DepartmentService {
 
     if (!allowedRoles.includes(role)) {
       throw new UnauthorizedException(
-        'Only root and superadmin can delete department.',
+        'Only root and superadmin can delete reasons of visit.',
       );
     }
     if (role !== 'Root') {
@@ -138,25 +140,25 @@ export class DepartmentService {
       }
     }
 
-    const departmentExists = await this.databaseService.department.findUnique({
+    const reasonExists = await this.databaseService.reasonOfVisit.findUnique({
       where: {
-        id: departmentId,
+        id: reasonId,
       },
     });
 
-    if (!departmentExists) {
-      throw new NotFoundException("Department doesn't exists.");
+    if (!reasonExists) {
+      throw new NotFoundException("Reason of visit doesn't exists.");
     }
 
-    await this.databaseService.department.delete({
+    await this.databaseService.reasonOfVisit.delete({
       where: {
-        id: departmentId,
+        id: reasonId,
       },
     });
 
     return {
       success: true,
-      message: 'Department deleted successfully.',
+      message: 'Reason of visit deleted successfully.',
     };
   }
 }
