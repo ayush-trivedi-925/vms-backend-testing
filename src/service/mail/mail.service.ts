@@ -30,7 +30,7 @@ export class MailService {
         <p>Name: ${details.fullName}</p>
         <p>Email: ${details.email}</p>
         <p>Organization: ${details.visitorOrganization}</p>
-        <p>Purpose: ${details.reasonOfVisit}</p>
+        <p>Purpose: ${details.reasonOfVisit.name}</p>
 
         <p>Please proceed to the reception to greet your visitor.</p>
 
@@ -60,7 +60,7 @@ export class MailService {
         <p>Host name: ${details.staff.name}</p>
         <p>Email: ${details.staff.email}</p>
         <p>Designation: ${details.staff.designation}</p>
-        <p>Department: ${details.staff.department}</p>
+        <p>Department: ${details.staff.department.name}</p>
         <p>Check-in Time: ${formattedTime}</p>
 
         <p>Thank you</p>
@@ -102,7 +102,7 @@ export class MailService {
       <p>Name: ${details.fullName}</p>
       <p>Email: ${details.email}</p>
       <p>Organization: ${details.visitorOrganization}</p>
-      <p>Purpose: ${details.reasonOfVisit}</p>
+      <p>Purpose: ${details.reasonOfVisit.name}</p>
       <p>Check-in Time: ${checkInFormattedTime}</p>
       <p>Check-out Time: ${formattedTime}</p>
 
@@ -145,7 +145,7 @@ export class MailService {
       <p>Host Name: ${details.staff.name}</p>
       <p>Email: ${details.staff.email}</p>
       <p>Designation: ${details.staff.designation}</p>
-      <p>Department: ${details.staff.department}</p>
+      <p>Department: ${details.staff.department.name}</p>
       <p>Check-in Time: ${checkInFormattedTime}</p>
       <p>Check-out Time: ${formattedTime}</p>
 

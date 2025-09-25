@@ -61,9 +61,12 @@ export class ReasonService {
     };
   }
 
-  async getAllReasons(orgId, userId, role, qOrgId?) {
-    const allowedRoles = ['Root', 'SuperAdmin', 'Admin'];
-    const targetOrgId = role === 'Root' && qOrgId ? qOrgId : orgId;
+  async getAllReasons(orgId, role, qOrgId?) {
+    const allowedRoles = ['Root', 'SuperAdmin', 'Admin', 'System'];
+    const targetOrgId =
+      (role === 'Root' && qOrgId) || (role === 'System' && qOrgId)
+        ? qOrgId
+        : orgId;
 
     if (!targetOrgId) {
       throw new BadRequestException('Organization ID is required.');
@@ -71,24 +74,17 @@ export class ReasonService {
 
     if (!allowedRoles.includes(role)) {
       throw new UnauthorizedException(
-        'Only root, superadmin and admin can access reaspns of visit.',
+        'Only root, superadmin and admin can access reasons of visit.',
       );
     }
-    if (role !== 'Root') {
-      const userExists = await this.databaseService.userCredential.findUnique({
-        where: {
-          id: userId,
-        },
+
+    const organizationExists =
+      await this.databaseService.organization.findUnique({
+        where: { id: targetOrgId },
       });
 
-      if (!userExists) {
-        throw new BadRequestException('Invalid credentials.');
-      }
-      if (userExists.orgId !== targetOrgId) {
-        throw new UnauthorizedException(
-          'User belongs to different organization.',
-        );
-      }
+    if (!organizationExists) {
+      throw new NotFoundException("Organization doesn't exist.");
     }
 
     const reasonsOfVisit = await this.databaseService.reasonOfVisit.findMany({

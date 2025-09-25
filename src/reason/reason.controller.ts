@@ -35,10 +35,9 @@ export class ReasonController {
   @Get('')
   async getAllDepartments(@Req() req, @Query('qOrgId') qOrgId?: string) {
     return this.reasonService.getAllReasons(
-      req.orgId,
-      req.userId,
+      req.orgId ?? null,
       req.role,
-      qOrgId ?? null,
+      qOrgId,
     );
   }
 

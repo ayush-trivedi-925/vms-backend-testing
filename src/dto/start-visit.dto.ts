@@ -16,7 +16,7 @@ export class StartVisitDto {
 
   @IsString()
   @IsNotEmpty()
-  reasonOfVisit: string;
+  reasonId: string;
 
   @IsString()
   @IsNotEmpty()

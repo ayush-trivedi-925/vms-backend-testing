@@ -68,4 +68,10 @@ export class VisitController {
   async allCompletedVisits(@Req() req) {
     return this.visitService.allCompletedVisits(req.orgId, req.role);
   }
+
+  // visit.controller.ts
+  @Get('visitors-per-department')
+  async getVisitorsPerDepartment(@Req() req) {
+    return this.visitService.getVisitorsPerDepartment(req.orgId);
+  }
 }

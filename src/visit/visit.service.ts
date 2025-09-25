@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
@@ -23,7 +24,7 @@ export class VisitService {
     checkInPicture?: Express.Multer.File,
   ) {
     let imageUrl: string | null = null;
-    const { fullName, email, visitorOrganization, reasonOfVisit, staffId } =
+    const { fullName, email, visitorOrganization, reasonId, staffId } =
       startVisitDto;
     const normalizedEmail = email.toLowerCase().trim();
     const normalizedFullName = fullName.trim();
@@ -89,13 +90,14 @@ export class VisitService {
         fullName: normalizedFullName,
         email: normalizedEmail,
         visitorOrganization,
-        reasonOfVisit,
+        reasonId,
         staffId,
         checkInPicture: imageUrl ?? null,
       },
       include: {
         staff: true,
         organization: true,
+        reasonOfVisit: true,
       },
     });
 
@@ -112,11 +114,13 @@ export class VisitService {
         fullName,
         email,
         visitorOrganization,
-        reasonOfVisit,
         hostDetails: {
           name: startVisitDetails.staff.name,
           department: startVisitDetails.staff.departmentId,
           designation: startVisitDetails.staff.designation,
+        },
+        reasonOfVist: {
+          name: startVisitDetails.reasonOfVisit?.name,
         },
         checkInTime: startVisitDetails.startTime,
       },
@@ -198,6 +202,7 @@ export class VisitService {
       include: {
         staff: true,
         organization: true,
+        reasonOfVisit: true,
       },
     });
     await this.mailService.VisitEndToVisitor(updatedVisitStatus);
@@ -228,6 +233,7 @@ export class VisitService {
             department: true,
           },
         },
+        reasonOfVisit: true,
       },
     });
 
@@ -258,7 +264,12 @@ export class VisitService {
         status: 'COMPLETED',
       },
       include: {
-        staff: true,
+        staff: {
+          include: {
+            department: true,
+          },
+        },
+        reasonOfVisit: true,
       },
     });
 
@@ -272,6 +283,72 @@ export class VisitService {
     return {
       success: true,
       allCompletedVisits: allCompletedVisits,
+    };
+  }
+
+  async getVisitorsPerDepartment(orgId: string) {
+    const orgExists = await this.databaseService.organization.findUnique({
+      where: {
+        id: orgId,
+      },
+    });
+
+    if (!orgExists) {
+      throw new NotFoundException("Organization doesn't exists.");
+    }
+
+    const allVisits = await this.databaseService.visit.findMany({
+      include: {
+        staff: {
+          include: {
+            department: true,
+          },
+        },
+      },
+    });
+
+    const completedVisits = await this.databaseService.visit.findMany({
+      where: {
+        status: 'COMPLETED',
+      },
+      include: {
+        staff: {
+          include: {
+            department: true,
+          },
+        },
+      },
+    });
+
+    const ongoingVisits = await this.databaseService.visit.findMany({
+      where: {
+        status: 'ONGOING',
+      },
+      include: {
+        staff: {
+          include: {
+            department: true,
+          },
+        },
+      },
+    });
+
+    // helper function to reduce visits into counts
+    const aggregateByDept = (visits: typeof allVisits) => {
+      return visits.reduce(
+        (acc, visit) => {
+          const deptName = visit.staff?.department?.name || 'No Department';
+          acc[deptName] = (acc[deptName] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+    };
+
+    return {
+      all: aggregateByDept(allVisits),
+      completed: aggregateByDept(completedVisits),
+      ongoing: aggregateByDept(ongoingVisits),
     };
   }
 }

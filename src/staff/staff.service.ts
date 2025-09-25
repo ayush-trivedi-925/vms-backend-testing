@@ -371,6 +371,7 @@ export class StaffService {
     }
 
     //Perform deletion
+
     await this.databaseService.staff.delete({ where: { id: staffId } });
     if (staff.userId) {
       await this.databaseService.userCredential.delete({
