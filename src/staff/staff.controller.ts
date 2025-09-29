@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -29,9 +30,27 @@ export class StaffController {
       req.orgId ?? null,
       req.role,
       addStaffMemberDto,
-      qOrgId,
+      qOrgId ?? null,
     );
   }
+
+  @Post('bulk')
+  async addStaffBulk(
+    @Req() req,
+    @Body() addStaff: AddStaffMemberDto[],
+    @Query('qOrgId') qOrgId: string,
+  ) {
+    if (!Array.isArray(addStaff) || addStaff.length === 0) {
+      throw new BadRequestException('Staff list must be a non-empty array.');
+    }
+    return this.staffService.addStaffBulk(
+      req.orgId ?? null,
+      req.role,
+      addStaff,
+      qOrgId ?? null,
+    );
+  }
+
   @Get('')
   async getAllStaffMemberDetails(@Req() req, @Query('qOrgId') qOrgId?: string) {
     return this.staffService.getAllStaffMemberDetails(

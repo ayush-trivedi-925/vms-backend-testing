@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -28,6 +29,23 @@ export class DepartmentController {
       req.userId,
       req.role,
       createDepartmentDto,
+      qOrgId ?? null,
+    );
+  }
+
+  @Post('bulk')
+  async addReasonBulk(
+    @Req() req,
+    @Body() departmentList: CreateDepartmentDto[],
+    @Query('qOrgId') qOrgId: string,
+  ) {
+    if (!Array.isArray(departmentList) || departmentList.length === 0) {
+      throw new BadRequestException('Staff list must be a non-empty array.');
+    }
+    return this.departmentService.addDepartmentBulk(
+      req.orgId ?? null,
+      req.role,
+      departmentList,
       qOrgId ?? null,
     );
   }

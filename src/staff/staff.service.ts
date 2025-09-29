@@ -76,6 +76,95 @@ export class StaffService {
     };
   }
 
+  async addStaffBulk(
+    orgId: string | null,
+    role: string,
+    staffList: AddStaffMemberDto[],
+    qOrgId?: string,
+  ) {
+    const targetOrgId = role === 'Root' && qOrgId ? qOrgId : orgId;
+    if (!targetOrgId) {
+      throw new BadRequestException('Organization ID is required.');
+    }
+
+    const allowedRoles = ['Root', 'SuperAdmin', 'Admin'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException(
+        'Only root, superadmin and admin can add employee',
+      );
+    }
+
+    const organizationExists =
+      await this.databaseService.organization.findUnique({
+        where: { id: targetOrgId },
+      });
+
+    if (!organizationExists) {
+      throw new NotFoundException("Organization doesn't exist.");
+    }
+    const results: any = [];
+    for (const staffDto of staffList) {
+      const { name, email, designation } = staffDto;
+      const normalizedEmail = email.toLowerCase().trim();
+      const departmentName = staffDto.departmentId; // 👈 from CSV
+
+      const staffMemberExists = await this.databaseService.staff.findFirst({
+        where: { email: normalizedEmail, orgId: targetOrgId },
+      });
+
+      if (staffMemberExists) {
+        results.push({
+          success: false,
+          message: `${name} already exists.`,
+          email,
+        });
+        continue;
+      }
+      const department = await this.databaseService.department.findFirst({
+        where: { name: departmentName },
+      });
+
+      if (!department) {
+        results.push({
+          success: false,
+          message: `Department ${departmentName} not found.`,
+          email: staffDto.email,
+        });
+        continue;
+      }
+
+      if (department?.orgId !== targetOrgId) {
+        results.push({
+          success: false,
+          message: `Department ${departmentName} not found.`,
+          email: staffDto.email,
+        });
+        continue;
+      }
+
+      const staffMember = await this.databaseService.staff.create({
+        data: {
+          orgId: targetOrgId,
+          name,
+          email: normalizedEmail,
+          designation,
+          departmentId: department.id,
+        },
+      });
+      results.push({
+        success: true,
+        message: `${name} has been added successfully.`,
+        staffMemberDetails: staffMember,
+      });
+    }
+    return {
+      success: true,
+      imported: results.filter((r) => r.success).length,
+      failed: results.filter((r) => !r.success).length,
+      details: results,
+    };
+  }
+
   async getAllStaffMemberDetails(
     orgId: string | null,
     role: string,

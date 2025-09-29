@@ -58,6 +58,55 @@ export class ReasonService {
     return {
       success: true,
       message: 'Reason added.',
+      reasonOfVisit,
+    };
+  }
+
+  async addReasonBulk(
+    orgId: string | null,
+    role: string,
+    reasonList: AddReasonDto[],
+    qOrgId: string | null,
+  ) {
+    const targetOrgId = role === 'Root' && qOrgId ? qOrgId : orgId;
+    if (!targetOrgId) {
+      throw new BadRequestException('Organization ID is required.');
+    }
+
+    const allowedRoles = ['Root', 'SuperAdmin', 'Admin'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException(
+        'Only root, superadmin and admin can add employee',
+      );
+    }
+
+    const organizationExists =
+      await this.databaseService.organization.findUnique({
+        where: { id: targetOrgId },
+      });
+
+    if (!organizationExists) {
+      throw new NotFoundException("Organization doesn't exist.");
+    }
+    const results: any = [];
+    for (const reasonDto of reasonList) {
+      const { name } = reasonDto;
+      const reason = await this.databaseService.reasonOfVisit.create({
+        data: {
+          name,
+          orgId: targetOrgId,
+        },
+      });
+      results.push({
+        success: true,
+        message: `${name} has been added successfully.`,
+        details: reason,
+      });
+    }
+    return {
+      success: true,
+      imported: results.filter((r) => r.success).length,
+      details: results,
     };
   }
 

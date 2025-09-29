@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -28,6 +29,23 @@ export class ReasonController {
       req.userId,
       req.role,
       addReasonDto,
+      qOrgId ?? null,
+    );
+  }
+
+  @Post('bulk')
+  async addReasonBulk(
+    @Req() req,
+    @Body() reasonList: AddReasonDto[],
+    @Query('qOrgId') qOrgId: string,
+  ) {
+    if (!Array.isArray(reasonList) || reasonList.length === 0) {
+      throw new BadRequestException('Staff list must be a non-empty array.');
+    }
+    return this.reasonService.addReasonBulk(
+      req.orgId ?? null,
+      req.role,
+      reasonList,
       qOrgId ?? null,
     );
   }

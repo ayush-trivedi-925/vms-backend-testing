@@ -59,6 +59,54 @@ export class DepartmentService {
     };
   }
 
+  async addDepartmentBulk(
+    orgId: string | null,
+    role: string,
+    departmentList: CreateDepartmentDto[],
+    qOrgId: string | null,
+  ) {
+    const targetOrgId = role === 'Root' && qOrgId ? qOrgId : orgId;
+    if (!targetOrgId) {
+      throw new BadRequestException('Organization ID is required.');
+    }
+
+    const allowedRoles = ['Root', 'SuperAdmin', 'Admin'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException(
+        'Only root, superadmin and admin can add employee',
+      );
+    }
+
+    const organizationExists =
+      await this.databaseService.organization.findUnique({
+        where: { id: targetOrgId },
+      });
+
+    if (!organizationExists) {
+      throw new NotFoundException("Organization doesn't exist.");
+    }
+    const results: any = [];
+    for (const departmentDto of departmentList) {
+      const { name } = departmentDto;
+      const department = await this.databaseService.department.create({
+        data: {
+          name,
+          orgId: targetOrgId,
+        },
+      });
+      results.push({
+        success: true,
+        message: `${name} has been added successfully.`,
+        details: department,
+      });
+    }
+    return {
+      success: true,
+      imported: results.filter((r) => r.success).length,
+      details: results,
+    };
+  }
+
   async getAllDepartments(orgId, userId, role, qOrgId?) {
     const allowedRoles = ['Root', 'SuperAdmin', 'Admin'];
     const targetOrgId = role === 'Root' && qOrgId ? qOrgId : orgId;
