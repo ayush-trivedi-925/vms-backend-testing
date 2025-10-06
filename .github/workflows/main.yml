@@ -1,37 +1,42 @@
 name: Deploy Backend to EC2
- 
+
 on:
   push:
     branches:
-      - master
- 
+      - main
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
- 
+
     steps:
-      - name: Checkout Repo
+      - name: Checkout repo
         uses: actions/checkout@v3
- 
-      - name: Deploy to EC2
+
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
           script: |
+            set -e
             cd ~/vms/segueit-vms-backend
-            git reset --hard
-            git clean -fd
-            git pull origin master
+
+            # Pull latest code
+            git fetch origin main
+            git reset --hard origin/main
+
+            # Install dependencies & build
             npm install --legacy-peer-deps
             npm run build
-            pm2 restart svms-backend || pm2 start dist/main.js --name svms-backend
 
-
-
-
-
-
-
-
+            # Restart backend with PM2
+            pm2 restart svms-backend || pm2 start dist/main.js --name svms-backend --watch
+            pm2 save
