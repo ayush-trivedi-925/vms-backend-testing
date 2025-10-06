@@ -7,10 +7,14 @@ import {
 import { DatabaseService } from 'src/database/database.service';
 import { CreateOrganizationDto } from 'src/dto/create-organization.dto';
 import { EditOrganizationDto } from 'src/dto/edit-organization.dto';
+import { MailService } from 'src/service/mail/mail.service';
 
 @Injectable()
 export class OrganizationService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly mailService: MailService,
+  ) {}
 
   async createOrganization(
     role: string,
@@ -45,6 +49,8 @@ export class OrganizationService {
         gst: gst || null,
       },
     });
+
+    await this.mailService.OrganizationRegistration(organization);
 
     return {
       success: true,

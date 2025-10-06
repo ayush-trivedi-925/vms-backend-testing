@@ -54,6 +54,41 @@ export class MailService {
     await this.transporter.sendMail(mailOptions);
   }
 
+  async OrganizationRegistration(details: any) {
+    const org = details;
+
+    const mailOptions = {
+      from: `"Visitor Management System" <no-reply@segueit.com>`,
+      to: org?.email,
+      subject: `Your Organization Has Been Successfully Registered - ${org.name}`,
+      html: `
+      <p>Dear ${org?.contactPerson || 'Valued Partner'},</p>
+
+      <p>We’re delighted to inform you that your organization has been successfully registered on the <b>SegueIT Visitor Management System</b>.</p>
+
+      <p>Here are your organization’s registration details:</p>
+      <ul>
+        <li><b>Organization Name:</b> ${org.name}</li>
+        <li><b>Email:</b> ${org.email}</li>
+        <li><b>Address:</b> ${org.address}</li>
+        <li><b>Contact Number:</b> ${org.contactNumber}</li>
+        <li><b>Contact Person:</b> ${org.contactPerson}</li>
+        <li><b>GST:</b> ${org.gst || 'N/A'}</li>
+      </ul>
+
+      <p>To activate your dashboard access, please provide the <b>Super Admin’s email address</b>. 
+      This will allow us to assign appropriate roles and grant system access for managing your organization’s visitor data.</p>
+
+      <p>Thank you for choosing <b>SegueIT Visitor Management System</b> to streamline your visitor check-ins and enhance workplace security.</p>
+
+      <p>Best regards,<br/>
+      <b>SegueIT Visitor Management Team</b></p>
+    `,
+    };
+
+    await this.transporter.sendMail(mailOptions);
+  }
+
   async VisitStartToVisitor(details: any) {
     const formattedTime = this.formatDate(details.startTime);
 

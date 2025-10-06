@@ -19,6 +19,7 @@ export class ReasonService {
     qOrgId?: string,
   ) {
     const { name } = addReasonDto;
+    const normalizedReason = name.toLowerCase().trim();
     const allowedRoles = ['Root', 'SuperAdmin', 'Admin'];
     const targetOrgId = role === 'Root' && qOrgId ? qOrgId : orgId;
 
@@ -46,6 +47,17 @@ export class ReasonService {
           'User belongs to different organization.',
         );
       }
+    }
+
+    const resonExists = await this.databaseService.reasonOfVisit.findFirst({
+      where: {
+        orgId: targetOrgId,
+        name,
+      },
+    });
+
+    if (resonExists?.name.toLowerCase().trim() === normalizedReason) {
+      throw new BadRequestException('Reason already exists.');
     }
 
     const reasonOfVisit = await this.databaseService.reasonOfVisit.create({
@@ -91,6 +103,23 @@ export class ReasonService {
     const results: any = [];
     for (const reasonDto of reasonList) {
       const { name } = reasonDto;
+      const normalizedReason = name.toLowerCase().trim();
+
+      const resonExists = await this.databaseService.reasonOfVisit.findFirst({
+        where: {
+          orgId: targetOrgId,
+          name,
+        },
+      });
+
+      if (resonExists?.name.toLowerCase().trim() === normalizedReason) {
+        results.push({
+          success: false,
+          message: `${name} already exists.`,
+        });
+        continue;
+      }
+
       const reason = await this.databaseService.reasonOfVisit.create({
         data: {
           name,

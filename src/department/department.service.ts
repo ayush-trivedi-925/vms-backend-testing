@@ -111,7 +111,11 @@ export class DepartmentService {
       });
 
       if (departmentExist?.name.toLowerCase().trim() === normalizedDepartment) {
-        throw new BadRequestException('Department already exists.');
+        results.push({
+          success: false,
+          message: `${name} already exists.`,
+        });
+        continue;
       }
 
       const department = await this.databaseService.department.create({
