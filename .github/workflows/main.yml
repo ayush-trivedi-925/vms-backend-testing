@@ -17,21 +17,15 @@ jobs:
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
+          username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
             set -e
             cd ~/vms/segueit-vms-backend
-
-            # Pull latest code
             git fetch origin main
             git reset --hard origin/main
-
-            # Install dependencies & build
             npm install --legacy-peer-deps
             npm run build
-
-            # Restart backend with PM2
             pm2 restart svms-backend || pm2 start dist/main.js --name svms-backend --watch
             pm2 save
