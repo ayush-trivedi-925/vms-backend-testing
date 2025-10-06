@@ -89,6 +89,7 @@ model UserCredential{
   updatedAt     DateTime @updatedAt
   staff    Staff?  @relation("StaffAuth")
   refreshToken RefreshToken[]
+  resetToken  ResetToken[]
 }
 
 model SystemCredential {
@@ -119,6 +120,13 @@ model ReasonOfVisit {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   vists Visit[]
+}
+
+model ResetToken {
+  id String @id @default(uuid())
+  token String @unique
+  userId  String @unique
+  userCredential  UserCredential  @relation(fields: [userId],  references: [id], onDelete: Cascade)
 }
 
 

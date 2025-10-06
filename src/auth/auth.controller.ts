@@ -2,6 +2,7 @@ import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from 'src/guard/auth.guard';
 import { AuthService } from './auth.service';
 import { RegisterRootDto } from 'src/dto/register-root.dto';
+import { ResetPasswordDto } from 'src/dto/reset-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -30,5 +31,15 @@ export class AuthController {
   @Post('refresh-user-access-token')
   async refreshAccessToken(@Body() body: { refreshToken: string }) {
     return this.authService.refreshAccessToken(body.refreshToken);
+  }
+
+  @Post('forgot-password')
+  async forgotPassword(@Body() body: { email: string }) {
+    return this.authService.forgotPassword(body.email);
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.authService.resetPassword(resetPasswordDto);
   }
 }

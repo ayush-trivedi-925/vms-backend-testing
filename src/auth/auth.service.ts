@@ -10,12 +10,16 @@ import { DatabaseService } from 'src/database/database.service';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuid } from 'uuid';
 import { RegisterRootDto } from 'src/dto/register-root.dto';
+import { MailService } from 'src/service/mail/mail.service';
+import { ResetPasswordDto } from 'src/dto/reset-password.dto';
+const otpGenerator = require('otp-generator');
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly jwtService: JwtService,
+    private readonly mailService: MailService,
   ) {}
 
   async registerRootUser(registeRootDto: RegisterRootDto) {
@@ -246,6 +250,112 @@ export class AuthService {
       message: 'Token refreshed.',
       accessToken: accessToken,
       refreshToken: newRefreshToken,
+    };
+  }
+  async forgotPassword(email: string) {
+    if (!email) {
+      throw new BadRequestException('Provide a valid email address.');
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const user = await this.databaseService.userCredential.findUnique({
+      where: { email: normalizedEmail },
+      include: { staff: true },
+    });
+
+    if (!user || user.accountStatus !== 'Active') {
+      throw new NotFoundException('No active user found with this email.');
+    }
+
+    // Generate a 6-digit OTP
+    const otp = otpGenerator.generate(6, {
+      digits: true,
+      lowerCaseAlphabets: false,
+      upperCaseAlphabets: false,
+      specialChars: false,
+    });
+
+    const hashedOtp = await bcrypt.hash(otp, 10);
+
+    // Use upsert to avoid unique constraint errors
+    await this.databaseService.resetToken.upsert({
+      where: { userId: user.id },
+      update: {
+        token: hashedOtp,
+      },
+      create: {
+        userId: user.id,
+        token: hashedOtp,
+      },
+    });
+
+    await this.mailService.sendForgotPasswordOTP({
+      email: normalizedEmail,
+      otp,
+      name: user.staff?.name || 'User',
+    });
+
+    return {
+      success: true,
+      message: 'Password reset OTP sent successfully. Please check your email.',
+    };
+  }
+
+  async resetPassword(resetPasswordDto: ResetPasswordDto) {
+    const { resetToken, newPassword, email } = resetPasswordDto;
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const user = await this.databaseService.userCredential.findUnique({
+      where: { email: normalizedEmail },
+      include: { staff: true },
+    });
+
+    if (!user || user.accountStatus !== 'Active') {
+      throw new NotFoundException('No active user found with this email.');
+    }
+
+    // Finding if token exists
+
+    const tokenExists = await this.databaseService.resetToken.findFirst({
+      where: {
+        userId: user.id,
+      },
+    });
+
+    if (!tokenExists) {
+      throw new BadRequestException('Token doesnt exists.');
+    }
+
+    const verifyOtp = await bcrypt.compare(resetToken, tokenExists?.token);
+
+    if (!verifyOtp) {
+      throw new BadRequestException('Invalid token!');
+    }
+
+    // Reseting the password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    // Updating the password
+    await this.databaseService.userCredential.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        password: hashedNewPassword,
+      },
+    });
+
+    // Deleting the reset token
+    await this.databaseService.resetToken.delete({
+      where: {
+        id: tokenExists.id,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Password reset successfully',
     };
   }
 }

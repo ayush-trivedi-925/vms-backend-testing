@@ -49,6 +49,6 @@ import { ReasonModule } from './reason/reason.module';
     ReasonModule,
   ],
   controllers: [AppController],
-  providers: [AppService, AuthService, CloudinaryService],
+  providers: [AppService, CloudinaryService],
 })
 export class AppModule {}
