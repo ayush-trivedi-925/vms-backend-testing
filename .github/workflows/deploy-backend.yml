@@ -1,5 +1,6 @@
 name: Deploy Backend to EC2
 
+# Trigger workflow on push to main branch
 on:
   push:
     branches:
@@ -10,37 +11,34 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      # Step 1: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup SSH agent
+      # Step 2: Setup SSH agent with private key
+      - name: Setup SSH
         uses: webfactory/ssh-agent@v0.8.0
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-      - name: Deploy Backend via SSH
+      # Step 3: Connect to EC2 and deploy backend
+      - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          port: 22
           script: |
             set -e
-            cd ~/vms/segueit-vms-backend || exit 1
+            cd ~/vms/segueit-vms-backend
 
             # Pull latest code
             git fetch origin main
             git reset --hard origin/main
 
-            # Install dependencies & build
-            npm install --production
+            # Install dependencies and build
+            npm install
             npm run build
-
-            # Ensure PM2 is installed globally
-            if ! command -v pm2 > /dev/null; then
-              npm install -g pm2
-            fi
 
             # Restart backend using PM2
             pm2 stop vms-backend || true
