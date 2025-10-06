@@ -95,16 +95,23 @@ export class VisitService {
         checkInPicture: imageUrl ?? null,
       },
       include: {
-        staff: true,
+        staff: {
+          include: {
+            department: true,
+          },
+        },
         organization: true,
         reasonOfVisit: true,
       },
     });
 
     console.log(startVisitDetails);
-
-    await this.mailService.VisitStartToVisitor(startVisitDetails);
-    await this.mailService.VisitStartToHost(startVisitDetails);
+    try {
+      await this.mailService.VisitStartToVisitor(startVisitDetails);
+      await this.mailService.VisitStartToHost(startVisitDetails);
+    } catch (error) {
+      console.error('mail error:', error);
+    }
 
     return {
       success: true,
@@ -200,7 +207,11 @@ export class VisitService {
         checkOutPicture: imageUrl ?? null,
       },
       include: {
-        staff: true,
+        staff: {
+          include: {
+            department: true,
+          },
+        },
         organization: true,
         reasonOfVisit: true,
       },

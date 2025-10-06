@@ -18,6 +18,7 @@ export class DepartmentService {
     qOrgId?,
   ) {
     const { name } = createDepartmentDto;
+    const normalizedDepartment = name.toLowerCase().trim();
     const allowedRoles = ['Root', 'SuperAdmin', 'Admin'];
     const targetOrgId = role === 'Root' && qOrgId ? qOrgId : orgId;
 
@@ -46,6 +47,18 @@ export class DepartmentService {
         );
       }
     }
+
+    const departmentExist = await this.databaseService.department.findFirst({
+      where: {
+        orgId: targetOrgId,
+        name,
+      },
+    });
+
+    if (departmentExist?.name.toLowerCase().trim() === normalizedDepartment) {
+      throw new BadRequestException('Department already exists.');
+    }
+
     const department = await this.databaseService.department.create({
       data: {
         orgId: targetOrgId,
@@ -88,6 +101,19 @@ export class DepartmentService {
     const results: any = [];
     for (const departmentDto of departmentList) {
       const { name } = departmentDto;
+      const normalizedDepartment = name.toLowerCase().trim();
+
+      const departmentExist = await this.databaseService.department.findFirst({
+        where: {
+          orgId: targetOrgId,
+          name,
+        },
+      });
+
+      if (departmentExist?.name.toLowerCase().trim() === normalizedDepartment) {
+        throw new BadRequestException('Department already exists.');
+      }
+
       const department = await this.databaseService.department.create({
         data: {
           name,

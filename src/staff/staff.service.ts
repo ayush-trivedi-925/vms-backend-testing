@@ -121,7 +121,7 @@ export class StaffService {
         continue;
       }
       const department = await this.databaseService.department.findFirst({
-        where: { name: departmentName },
+        where: { name: departmentName, orgId: targetOrgId },
       });
 
       if (!department) {
