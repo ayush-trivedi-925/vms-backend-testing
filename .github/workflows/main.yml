@@ -10,22 +10,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Deploy to EC2 via SSH
-        uses: appleboy/ssh-action@v0.1.10
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: 22
-          script: |
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Deploy to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             set -e
+
+            echo "🔹 Navigating to backend directory..."
             cd ~/vms/segueit-vms-backend
+
+            echo "🔹 Updating Git origin..."
+            git remote set-url origin git@github.com:segueit/segueit-vms-backend.git
+
+            echo "🔹 Fetching latest code..."
             git fetch origin main
             git reset --hard origin/main
+
+            echo "🔹 Installing dependencies..."
             npm install --legacy-peer-deps
+
+            echo "🔹 Building project..."
             npm run build
-            pm2 restart svms-backend || pm2 start dist/main.js --name svms-backend --watch
+
+            echo "🔹 Restarting PM2..."
+            pm2 restart svms-backend || pm2 start dist/main.js --name svms-backend
             pm2 save
+
+            echo "✅ Deployment completed successfully!"
+          EOF
