@@ -1,9 +1,9 @@
-name: Deploy Backend to EC2
+name: 🚀 Deploy Backend to EC2
 
 on:
   push:
     branches:
-      - main
+      - main  # or master if you deploy from master
 
 jobs:
   deploy:
@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.8.0
@@ -26,22 +26,29 @@ jobs:
             echo "🔹 Navigating to backend directory..."
             cd ~/vms/segueit-vms-backend
 
-            echo "🔹 Updating Git origin..."
+            echo "🔹 Resetting remote..."
             git remote set-url origin git@github.com:segueit/segueit-vms-backend.git
 
-            echo "🔹 Fetching latest code..."
+            echo "🔹 Pulling latest code..."
             git fetch origin main
             git reset --hard origin/main
 
             echo "🔹 Installing dependencies..."
             npm install --legacy-peer-deps
 
-            echo "🔹 Building project..."
+            echo "🔹 Generating Prisma client..."
+            npx prisma generate
+
+            echo "🔹 Running Prisma migrations..."
+            npx prisma migrate deploy
+
+            echo "🔹 Building NestJS project..."
             npm run build
 
-            echo "🔹 Restarting PM2..."
-            pm2 restart svms-backend || pm2 start dist/main.js --name svms-backend
+            echo "🔹 Restarting backend with PM2..."
+            pm2 delete svms-backend || true
+            pm2 start dist/main.js --name svms-backend
             pm2 save
 
-            echo "✅ Deployment completed successfully!"
+            echo "✅ Backend deployment completed successfully!"
           EOF
