@@ -4,8 +4,7 @@ on:
   push:
     branches:
       - master
-  workflow_dispatch:
-
+  workflow_dispatch: # allows manual trigger from Actions tab
 
 jobs:
   deploy:
@@ -32,8 +31,8 @@ jobs:
             git remote set-url origin git@github.com:segueit/segueit-vms-backend.git
 
             echo "🔹 Pulling latest code..."
-            git fetch origin main
-            git reset --hard origin/main
+            git fetch origin master
+            git reset --hard origin/master
 
             echo "🔹 Installing dependencies..."
             npm install --legacy-peer-deps
