@@ -1,6 +1,5 @@
 name: 🚀 Deploy Backend to EC2
 
-# Trigger on push to master or manual trigger
 on:
   push:
     branches:
@@ -12,17 +11,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout the repository
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Setup SSH agent with your deploy key
-      - name: Setup SSH
+      - name: Setup SSH agent
         uses: webfactory/ssh-agent@v0.8.0
         with:
           ssh-private-key: ${{ secrets.EC2_GITHUB_SSH_KEY }}
 
-      # 3️⃣ SSH into EC2 and deploy
       - name: Deploy to EC2
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
@@ -30,20 +26,16 @@ jobs:
             echo "🔹 Navigating to backend directory..."
             cd ~/vms/segueit-vms-backend
 
-            echo "🔹 Ensuring Git uses correct SSH key..."
-            git remote set-url origin git@github.com:segueit/segueit-vms-backend.git
-
             echo "🔹 Pulling latest code..."
+            export GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no"
             git fetch origin master
             git reset --hard origin/master
 
             echo "🔹 Installing dependencies..."
             npm install --legacy-peer-deps
 
-            echo "🔹 Generating Prisma client..."
+            echo "🔹 Prisma generate & migrate..."
             npx prisma generate
-
-            echo "🔹 Running Prisma migrations..."
             npx prisma migrate deploy
 
             echo "🔹 Building NestJS project..."
@@ -54,5 +46,5 @@ jobs:
             pm2 start dist/main.js --name svms-backend
             pm2 save
 
-            echo "✅ Backend deployment completed successfully!"
+            echo "✅ Deployment completed successfully!"
           EOF
