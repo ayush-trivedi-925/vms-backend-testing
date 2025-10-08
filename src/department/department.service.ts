@@ -137,9 +137,18 @@ export class DepartmentService {
     };
   }
 
-  async getAllDepartments(orgId, userId, role, qOrgId?) {
+  async getAllDepartments(
+    orgId,
+    userId,
+    role,
+    sortBy = 'createdAt',
+    order: 'asc' | 'desc' = 'desc',
+    qOrgId?,
+  ) {
     const allowedRoles = ['Root', 'SuperAdmin', 'Admin'];
     const targetOrgId = role === 'Root' && qOrgId ? qOrgId : orgId;
+    const validFields = ['name', 'createdAt'];
+    const sortField = validFields.includes(sortBy) ? sortBy : 'createdAt';
 
     if (!targetOrgId) {
       throw new BadRequestException('Organization ID is required.');
@@ -171,6 +180,7 @@ export class DepartmentService {
       where: {
         orgId: targetOrgId,
       },
+      orderBy: { [sortBy]: order },
     });
 
     if (!departments.length) {
@@ -180,9 +190,27 @@ export class DepartmentService {
       };
     }
 
+    const staffCounts = await this.databaseService.staff.groupBy({
+      by: ['departmentId'],
+      _count: { departmentId: true },
+    });
+
+    // Map departmentId to count for fast lookup
+    const countMap = Object.fromEntries(
+      staffCounts.map((sc) => [sc.departmentId, sc._count.departmentId]),
+    );
+
+    // Attach staff count to each department
+    const departmentsWithCounts = departments.map((dept) => ({
+      ...dept,
+      staffCount: countMap[dept.id] || 0,
+    }));
+
     return {
       success: true,
-      allDepartments: departments,
+      allDepartments: departmentsWithCounts,
+      sortBy,
+      order,
     };
   }
 

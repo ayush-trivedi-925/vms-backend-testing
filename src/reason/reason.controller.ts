@@ -51,10 +51,18 @@ export class ReasonController {
   }
 
   @Get('')
-  async getAllDepartments(@Req() req, @Query('qOrgId') qOrgId?: string) {
+  async getAllReasons(
+    @Req() req,
+    @Query('sortBy') sortBy?: string,
+    @Query('order') order: 'asc' | 'desc' = 'desc',
+    @Query('qOrgId')
+    qOrgId?: string,
+  ) {
     return this.reasonService.getAllReasons(
       req.orgId ?? null,
       req.role,
+      sortBy,
+      order,
       qOrgId,
     );
   }

@@ -331,7 +331,7 @@ export class AuthService {
     const verifyOtp = await bcrypt.compare(resetToken, tokenExists?.token);
 
     if (!verifyOtp) {
-      throw new BadRequestException('Invalid token!');
+      throw new BadRequestException('Invalid OTP!');
     }
 
     // Reseting the password

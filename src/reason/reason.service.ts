@@ -139,8 +139,16 @@ export class ReasonService {
     };
   }
 
-  async getAllReasons(orgId, role, qOrgId?) {
+  async getAllReasons(
+    orgId,
+    role,
+    sortBy = 'createdAt',
+    order: 'asc' | 'desc' = 'desc',
+    qOrgId?,
+  ) {
     const allowedRoles = ['Root', 'SuperAdmin', 'Admin', 'System'];
+    const validFields = ['name', 'createdAt'];
+    const sortField = validFields.includes(sortBy) ? sortBy : 'createdAt';
     const targetOrgId =
       (role === 'Root' && qOrgId) || (role === 'System' && qOrgId)
         ? qOrgId
@@ -169,6 +177,7 @@ export class ReasonService {
       where: {
         orgId: targetOrgId,
       },
+      orderBy: { [sortField]: order },
     });
 
     if (!reasonsOfVisit.length) {
@@ -181,11 +190,13 @@ export class ReasonService {
     return {
       success: true,
       allReasonsOfVisit: reasonsOfVisit,
+      sortBy: sortField,
+      order,
     };
   }
 
   async deleteReason(orgId, userId, role, reasonId, qOrgId?) {
-    const allowedRoles = ['Root', 'SuperAdmin'];
+    const allowedRoles = ['Root', 'SuperAdmin', 'Admin'];
     const targetOrgId = role === 'Root' && qOrgId ? qOrgId : orgId;
 
     if (!targetOrgId) {

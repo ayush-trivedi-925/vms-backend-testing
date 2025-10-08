@@ -51,11 +51,18 @@ export class DepartmentController {
   }
 
   @Get('')
-  async getAllDepartments(@Req() req, @Query('qOrgId') qOrgId?: string) {
+  async getAllDepartments(
+    @Req() req,
+    @Query('sortBy') sortBy?: string,
+    @Query('order') order: 'asc' | 'desc' = 'desc',
+    @Query('qOrgId') qOrgId?: string,
+  ) {
     return this.departmentService.getAllDepartments(
       req.orgId,
       req.userId,
       req.role,
+      sortBy,
+      order,
       qOrgId ?? null,
     );
   }
