@@ -1,5 +1,6 @@
 name: 🚀 Deploy Backend to EC2
 
+# Trigger on push to master or manual trigger
 on:
   push:
     branches:
@@ -11,32 +12,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup SSH to EC2
+      # 2️⃣ Setup SSH agent with your deploy key
+      - name: Setup SSH
         uses: webfactory/ssh-agent@v0.8.0
         with:
           ssh-private-key: ${{ secrets.EC2_GITHUB_SSH_KEY }}
 
+      # 3️⃣ SSH into EC2 and deploy
       - name: Deploy to EC2
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             set -e
-
-            echo "🔹 Starting deployment on EC2..."
+            echo "🔹 Navigating to backend directory..."
             cd ~/vms/segueit-vms-backend
 
-            echo "🔹 Setting up GitHub SSH key for repo access..."
-            eval "$(ssh-agent -s)"
-            mkdir -p ~/.ssh
-            echo "${{ secrets.EC2_GITHUB_SSH_KEY }}" > ~/.ssh/id_rsa
-            chmod 600 ~/.ssh/id_rsa
-            ssh-add ~/.ssh/id_rsa
-            ssh-keyscan github.com >> ~/.ssh/known_hosts
+            echo "🔹 Ensuring Git uses correct SSH key..."
+            git remote set-url origin git@github.com:segueit/segueit-vms-backend.git
 
             echo "🔹 Pulling latest code..."
-            git pull origin master
+            git fetch origin master
+            git reset --hard origin/master
 
             echo "🔹 Installing dependencies..."
             npm install --legacy-peer-deps
@@ -44,14 +43,15 @@ jobs:
             echo "🔹 Generating Prisma client..."
             npx prisma generate
 
-            echo "🔹 Applying Prisma migrations..."
+            echo "🔹 Running Prisma migrations..."
             npx prisma migrate deploy
 
-            echo "🔹 Building project..."
+            echo "🔹 Building NestJS project..."
             npm run build
 
-            echo "🔹 Restarting PM2..."
-            pm2 restart svms-backend || pm2 start dist/main.js --name svms-backend
+            echo "🔹 Restarting backend with PM2..."
+            pm2 delete svms-backend || true
+            pm2 start dist/main.js --name svms-backend
             pm2 save
 
             echo "✅ Backend deployment completed successfully!"
