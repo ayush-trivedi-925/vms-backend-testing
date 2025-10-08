@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - master
-  workflow_dispatch: # allows manual trigger from Actions tab
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -23,16 +23,11 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             set -e
-
             echo "🔹 Navigating to backend directory..."
             cd ~/vms/segueit-vms-backend
 
-            echo "🔹 Resetting remote..."
-            git remote set-url origin git@github.com:segueit/segueit-vms-backend.git
-
             echo "🔹 Pulling latest code..."
-            git fetch origin master
-            git reset --hard origin/master
+            git pull origin master
 
             echo "🔹 Installing dependencies..."
             npm install --legacy-peer-deps
@@ -40,15 +35,14 @@ jobs:
             echo "🔹 Generating Prisma client..."
             npx prisma generate
 
-            echo "🔹 Running Prisma migrations..."
+            echo "🔹 Applying Prisma migrations..."
             npx prisma migrate deploy
 
-            echo "🔹 Building NestJS project..."
+            echo "🔹 Building project..."
             npm run build
 
-            echo "🔹 Restarting backend with PM2..."
-            pm2 delete svms-backend || true
-            pm2 start dist/main.js --name svms-backend
+            echo "🔹 Restarting PM2..."
+            pm2 restart svms-backend || pm2 start dist/main.js --name svms-backend
             pm2 save
 
             echo "✅ Backend deployment completed successfully!"
