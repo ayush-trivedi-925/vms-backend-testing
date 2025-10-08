@@ -14,7 +14,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup SSH
+      - name: Setup SSH to EC2
         uses: webfactory/ssh-agent@v0.8.0
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
@@ -23,8 +23,17 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             set -e
-            echo "🔹 Navigating to backend directory..."
+
+            echo "🔹 Starting deployment on EC2..."
             cd ~/vms/segueit-vms-backend
+
+            echo "🔹 Setting up GitHub SSH key for repo access..."
+            eval "$(ssh-agent -s)"
+            mkdir -p ~/.ssh
+            echo "${{ secrets.EC2_GITHUB_SSH_KEY }}" > ~/.ssh/id_rsa
+            chmod 600 ~/.ssh/id_rsa
+            ssh-add ~/.ssh/id_rsa
+            ssh-keyscan github.com >> ~/.ssh/known_hosts
 
             echo "🔹 Pulling latest code..."
             git pull origin master
