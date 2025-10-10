@@ -34,6 +34,17 @@ export class MailService {
   }
 
   async VisitStartToHost(details: any) {
+    const attachments: any = [];
+
+    // If QR code buffer exists, add it as attachment
+    if (details.qrCodeBuffer) {
+      attachments.push({
+        filename: `qr-code-${details.id}.png`,
+        content: details.qrCodeBuffer,
+        contentType: 'image/png',
+        cid: 'visitQrCode', // same cid value as in the html img src
+      });
+    }
     const mailOptions = {
       from: '"Visitor Arrival Notification" <noreply@yourapp.com>',
       to: details.staff?.email,
@@ -45,11 +56,20 @@ export class MailService {
         <p><b>Email:</b> ${details.email}</p>
         <p><b>Organization:</b> ${details.visitorOrganization}</p>
         <p><b>Purpose:</b> ${details.reasonOfVisit?.name}</p>
+         ${
+           details.qrCodeBuffer
+             ? `
+        <p>QR Code for visitor check-out:</p>
+        <img src="cid:visitQrCode" alt="Visit QR Code" width="200" height="200" style="display:block;"/>
+      `
+             : ''
+         }
 
         <p>Please proceed to the reception to greet your visitor.</p>
         <p>Thank you</p>
         <p>${details.organization?.name || 'Our Company'} Security Team</p>
       `,
+      attachments: attachments,
     };
     await this.transporter.sendMail(mailOptions);
   }
@@ -91,6 +111,17 @@ export class MailService {
 
   async VisitStartToVisitor(details: any) {
     const formattedTime = this.formatDate(details.startTime);
+    const attachments: any = [];
+
+    // If QR code buffer exists, add it as attachment
+    if (details.qrCodeBuffer) {
+      attachments.push({
+        filename: `qr-code-${details.id}.png`,
+        content: details.qrCodeBuffer,
+        contentType: 'image/png',
+        cid: 'visitQrCode', // same cid value as in the html img src
+      });
+    }
 
     const mailOptions = {
       from: '"Check-In Notification" <noreply@yourapp.com>',
@@ -103,10 +134,20 @@ export class MailService {
         <p><b>Designation:</b> ${details.staff?.designation || 'N/A'}</p>
         <p><b>Department:</b> ${details.staff?.department?.name || 'Not Assigned'}</p>
         <p><b>Check-in Time:</b> ${formattedTime}</p>
+       
+         ${
+           details.qrCodeBuffer
+             ? `
+       <p>Please present this QR code at the reception:</p>
+        <img src="cid:visitQrCode" alt="Visit QR Code" width="200" height="200" style="display:block;"/>
+      `
+             : ''
+         }
 
         <p>Thank you</p>
         <p>${details.organization?.name || 'Our Company'} Reception Team</p>
       `,
+      attachments: attachments,
     };
     await this.transporter.sendMail(mailOptions);
   }

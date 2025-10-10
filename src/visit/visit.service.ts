@@ -9,6 +9,7 @@ import { EndVisitDto } from 'src/dto/end-visit.dto';
 import { StartVisitDto } from 'src/dto/start-visit.dto';
 import { CloudinaryService } from 'src/media/cloudinary.service';
 import { MailService } from 'src/service/mail/mail.service';
+import * as QRCode from 'qrcode';
 
 @Injectable()
 export class VisitService {
@@ -106,9 +107,23 @@ export class VisitService {
     });
 
     console.log(startVisitDetails);
+
+    let qrCodeBuffer: Buffer | null = null;
     try {
-      await this.mailService.VisitStartToVisitor(startVisitDetails);
-      await this.mailService.VisitStartToHost(startVisitDetails);
+      // Generate QR code as buffer
+      qrCodeBuffer = await QRCode.toBuffer(startVisitDetails.id);
+    } catch (err) {
+      console.error('Failed to generate QR code', err);
+      qrCodeBuffer = null;
+    }
+    const emailDetails = {
+      ...startVisitDetails,
+      qrCodeBuffer,
+    };
+
+    try {
+      await this.mailService.VisitStartToVisitor(emailDetails);
+      await this.mailService.VisitStartToHost(emailDetails);
     } catch (error) {
       console.error('mail error:', error);
     }
@@ -222,6 +237,71 @@ export class VisitService {
       success: true,
       message: `${normalizedFullName} has checked-out at ${new Date().toLocaleString()}.`,
       updatedVisitStatus: updatedVisitStatus,
+    };
+  }
+
+  async endVisitQr(orgId: string, role: string, visitId: string) {
+    if (!orgId || !visitId) {
+      throw new BadRequestException('Provide valid orgId and visitId');
+    }
+    const allowedRoles = ['System'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException(
+        'nauthorized checkout attempt. Invalid role.',
+      );
+    }
+
+    const organizationExists =
+      await this.databaseService.organization.findUnique({
+        where: {
+          id: orgId,
+        },
+      });
+
+    if (!organizationExists) {
+      throw new NotFoundException('Organization does not exists.');
+    }
+
+    const visitExists = await this.databaseService.visit.findUnique({
+      where: {
+        id: visitId,
+      },
+      include: {
+        organization: true,
+      },
+    });
+
+    if (!visitExists || visitExists.status === 'COMPLETED') {
+      throw new BadRequestException('Invalid visit.');
+    }
+
+    if (visitExists.orgId !== orgId) {
+      throw new UnauthorizedException('Unauthorized checkout attempt.');
+    }
+
+    const updatedVisitStatus = await this.databaseService.visit.update({
+      where: { id: visitExists.id },
+      data: {
+        status: 'COMPLETED',
+        endTime: new Date(),
+      },
+      include: {
+        staff: {
+          include: {
+            department: true,
+          },
+        },
+        organization: true,
+        reasonOfVisit: true,
+      },
+    });
+
+    await this.mailService.VisitEndToVisitor(updatedVisitStatus);
+    await this.mailService.VisitEndToHost(updatedVisitStatus);
+
+    return {
+      success: true,
+      msg: 'Visit completed successfully.',
     };
   }
 

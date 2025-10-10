@@ -59,6 +59,11 @@ export class VisitController {
     );
   }
 
+  @Post('check-out-qr/:visitId')
+  async checkoutQr(@Req() req, @Param('visitId') visitId: string) {
+    return this.visitService.endVisitQr(req.orgId, req.role, visitId);
+  }
+
   @Get('ongoing')
   async allOnGoingVisits(@Req() req) {
     return this.visitService.allOnGoingVisits(req.orgId, req.role);
