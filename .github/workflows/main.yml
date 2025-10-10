@@ -1,50 +1,31 @@
-name: 🚀 Deploy Backend to EC2
+name: Deploy Backend
 
 on:
   push:
-    branches:
-      - master
+    branches: [master]
   workflow_dispatch:
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
+  deploy-backend:
+    runs-on: self-hosted
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Setup SSH agent
-        uses: webfactory/ssh-agent@v0.8.0
-        with:
-          ssh-private-key: ${{ secrets.EC2_GITHUB_SSH_KEY }}
-
-      - name: Deploy to EC2
+      - name: Deploy Backend
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-            set -e
-            echo "🔹 Navigating to backend directory..."
-            cd ~/vms/segueit-vms-backend
+          BACKEND_PATH=~/vms/segueit-vms-backend
 
-            echo "🔹 Pulling latest code..."
-            export GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no"
-            git fetch origin master
-            git reset --hard origin/master
+          cd $BACKEND_PATH
+          git fetch origin master
+          git reset --hard origin/master
 
-            echo "🔹 Installing dependencies..."
-            npm install --legacy-peer-deps
+          npm ci --legacy-peer-deps
+          npx prisma generate
+          npx prisma migrate deploy
 
-            echo "🔹 Prisma generate & migrate..."
-            npx prisma generate
-            npx prisma migrate deploy
-
-            echo "🔹 Building NestJS project..."
-            npm run build
-
-            echo "🔹 Restarting backend with PM2..."
-            pm2 delete svms-backend || true
-            pm2 start dist/main.js --name svms-backend
-            pm2 save
-
-            echo "✅ Deployment completed successfully!"
-          EOF
+          npm run build
+          pm2 delete svms-backend || true
+          pm2 start dist/main.js --name "svms-backend"
+          pm2 save
