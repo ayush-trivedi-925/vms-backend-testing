@@ -240,14 +240,24 @@ export class VisitService {
     };
   }
 
-  async endVisitQr(orgId: string, role: string, visitId: string) {
-    if (!orgId || !visitId) {
-      throw new BadRequestException('Provide valid orgId and visitId');
+  async endVisitQr(
+    orgId: string,
+    role: string,
+    visitId: string,
+    checkOutPicture?: Express.Multer.File,
+  ) {
+    let imageUrl: string | null = null;
+    if (!orgId) {
+      throw new BadRequestException('Provide valid orgId.');
+    }
+
+    if (!visitId) {
+      throw new BadRequestException('Please scan a valid checkout QR code.');
     }
     const allowedRoles = ['System'];
     if (!allowedRoles.includes(role)) {
       throw new UnauthorizedException(
-        'nauthorized checkout attempt. Invalid role.',
+        'Unauthorized checkout attempt. Invalid role.',
       );
     }
 
@@ -272,11 +282,24 @@ export class VisitService {
     });
 
     if (!visitExists || visitExists.status === 'COMPLETED') {
-      throw new BadRequestException('Invalid visit.');
+      throw new BadRequestException('Please scan a valid checkout QR code.');
     }
 
     if (visitExists.orgId !== orgId) {
       throw new UnauthorizedException('Unauthorized checkout attempt.');
+    }
+
+    if (checkOutPicture) {
+      try {
+        const uploaded = await this.cloudinary.uploadImage(
+          checkOutPicture,
+          'acs',
+        );
+        imageUrl = uploaded['secure_url'];
+        console.log(imageUrl);
+      } catch (error) {
+        throw new BadRequestException('Image upload failed');
+      }
     }
 
     const updatedVisitStatus = await this.databaseService.visit.update({
@@ -284,6 +307,7 @@ export class VisitService {
       data: {
         status: 'COMPLETED',
         endTime: new Date(),
+        checkOutPicture: imageUrl ?? null,
       },
       include: {
         staff: {

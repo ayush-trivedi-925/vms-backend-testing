@@ -59,9 +59,19 @@ export class VisitController {
     );
   }
 
+  @UseInterceptors(FileInterceptor('checkOutPicture', multerConfig))
   @Post('check-out-qr/:visitId')
-  async checkoutQr(@Req() req, @Param('visitId') visitId: string) {
-    return this.visitService.endVisitQr(req.orgId, req.role, visitId);
+  async checkoutQr(
+    @Req() req,
+    @Param('visitId') visitId: string,
+    @UploadedFile() checkOutPicture?: Express.Multer.File,
+  ) {
+    return this.visitService.endVisitQr(
+      req.orgId,
+      req.role,
+      visitId,
+      checkOutPicture ?? undefined,
+    );
   }
 
   @Get('ongoing')
