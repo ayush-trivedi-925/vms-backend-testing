@@ -109,7 +109,7 @@ export class StaffService {
       const departmentName = staffDto.departmentId; // 👈 from CSV
 
       const staffMemberExists = await this.databaseService.staff.findFirst({
-        where: { email: normalizedEmail, orgId: targetOrgId },
+        where: { email: normalizedEmail },
       });
 
       if (staffMemberExists) {

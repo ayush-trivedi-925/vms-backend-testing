@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   Req,
   UploadedFile,
   UseGuards,
@@ -16,11 +17,15 @@ import { EndVisitDto } from 'src/dto/end-visit.dto';
 import { AuthGuard } from 'src/guard/auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerConfig } from 'src/service/multer/multer.config';
+import { VisitAnalyticsService } from './visit.analytics.service';
 
 @UseGuards(AuthGuard)
 @Controller('visit')
 export class VisitController {
-  constructor(private readonly visitService: VisitService) {}
+  constructor(
+    private readonly visitService: VisitService,
+    private readonly visitAnalyticsService: VisitAnalyticsService,
+  ) {}
   @UseInterceptors(FileInterceptor('checkInPicture', multerConfig))
   @Post('check-in')
   async startVisit(
@@ -88,5 +93,36 @@ export class VisitController {
   @Get('visitors-per-department')
   async getVisitorsPerDepartment(@Req() req) {
     return this.visitService.getVisitorsPerDepartment(req.orgId);
+  }
+
+  @Get(':orgId/summary')
+  getSummary(
+    @Param('orgId') orgId: string,
+    @Query('period') period: 'day' | 'week' | 'month' | 'year' | 'all' = 'all',
+  ) {
+    return this.visitAnalyticsService.getVisitStats(orgId, period);
+  }
+
+  @Get(':orgId/top-employees')
+  getTopEmployees(@Param('orgId') orgId: string, @Query('period') period: any) {
+    return this.visitAnalyticsService.getTopEmployees(orgId, period);
+  }
+
+  @Get(':orgId/top-visitors')
+  getTopVisitors(@Param('orgId') orgId: string, @Query('period') period: any) {
+    return this.visitAnalyticsService.getTopVisitors(orgId, period);
+  }
+
+  @Get(':orgId/top-departments')
+  getTopDepartments(
+    @Param('orgId') orgId: string,
+    @Query('period') period: any,
+  ) {
+    return this.visitAnalyticsService.getTopDepartments(orgId, period);
+  }
+
+  @Get(':orgId/top-reasons')
+  getTopReasons(@Param('orgId') orgId: string, @Query('period') period: any) {
+    return this.visitAnalyticsService.getTopReasons(orgId, period);
   }
 }

@@ -4,10 +4,11 @@ import { VisitController } from './visit.controller';
 import { DatabaseModule } from 'src/database/database.module';
 import { MailModule } from 'src/service/mail/mail.module';
 import { MediaModule } from 'src/media/media.module';
+import { VisitAnalyticsService } from './visit.analytics.service';
 
 @Module({
   imports: [DatabaseModule, MailModule, MediaModule],
-  providers: [VisitService],
+  providers: [VisitService, VisitAnalyticsService],
   controllers: [VisitController],
 })
 export class VisitModule {}
