@@ -1,0 +1,35 @@
+# segueit-vms-backend/.github/workflows/deploy.yml
+name: Deploy Backend to EC2
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "🔹 Pull latest backend"
+            cd ~/vms/segueit-vms-backend
+            git reset --hard
+            git pull origin master
+            echo "🔹 Install dependencies"
+            npm ci --legacy-peer-deps
+            npm run build
+            echo "🔹 Restart PM2 process"
+            pm2 delete segueit-vms-backend || true
+            pm2 start npm --name segueit-vms-backend -- start
+            pm2 save
+            echo "✅ Backend deployed successfully!"
