@@ -12,8 +12,6 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0  # Important: fetch full repo history
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
@@ -21,4 +19,4 @@ jobs:
           ssh-private-key: ${{ secrets.EC2_DEPLOY_KEY }}
 
       - name: Run deploy script on EC2
-        run: ssh -o StrictHostKeyChecking=no ubuntu@<YOUR_EC2_IP> 'bash ~/vms/deploy.sh'
+        run: ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} 'bash ~/vms/deploy.sh'
