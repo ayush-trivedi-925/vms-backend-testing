@@ -10,13 +10,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-    - name: Setup SSH
-      uses: webfactory/ssh-agent@v0.9.0   # <-- updated version
-      with:
-        ssh-private-key: ${{ secrets.EC2_DEPLOY_KEY }}
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_DEPLOY_KEY }}
 
-    - name: Run deploy script on EC2
-      run: ssh -o StrictHostKeyChecking=no ubuntu@43.205.175.242 'bash ~/vms/deploy.sh'
+      - name: Run deploy script on EC2
+        run: ssh -o StrictHostKeyChecking=no ubuntu@43.205.175.242 'bash ~/vms/deploy.sh'
