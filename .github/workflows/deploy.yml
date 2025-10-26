@@ -20,4 +20,7 @@ jobs:
 
       - name: Deploy to EC2
         run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@43.205.175.242 'bash ~/vms/deploy.sh'
+          ssh -o StrictHostKeyChecking=no ubuntu@43.205.175.242 '
+            echo "🔹 Running deployment script on EC2..."
+            bash ~/vms/deploy.sh
+          '
