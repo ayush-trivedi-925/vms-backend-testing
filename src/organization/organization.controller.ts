@@ -7,25 +7,32 @@ import {
   Post,
   Put,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { CreateOrganizationDto } from 'src/dto/create-organization.dto';
 import { OrganizationService } from './organization.service';
 import { AuthGuard } from 'src/guard/auth.guard';
 import { EditOrganizationDto } from 'src/dto/edit-organization.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { multerConfig } from 'src/service/multer/multer.config';
 
 @UseGuards(AuthGuard)
 @Controller('organization')
 export class OrganizationController {
   constructor(private readonly organizationService: OrganizationService) {}
+  @UseInterceptors(FileInterceptor('logo', multerConfig))
   @Post('')
   async createOrganization(
     @Req() req,
     @Body() createOrganizationDto: CreateOrganizationDto,
+    @UploadedFile() logo?: Express.Multer.File,
   ) {
     return this.organizationService.createOrganization(
       req.role,
       createOrganizationDto,
+      logo ?? undefined,
     );
   }
 
@@ -38,17 +45,20 @@ export class OrganizationController {
     return this.organizationService.getOrganizationDetails(orgId, req.role);
   }
 
+  @UseInterceptors(FileInterceptor('logo', multerConfig))
   @Put(':orgId')
   async editOrganizationDetails(
     @Param('orgId') orgId: string,
     @Req() req,
     @Body() editOrganizationDto: EditOrganizationDto,
+    @UploadedFile() logo?: Express.Multer.File,
   ) {
     return this.organizationService.editOrganizationDetails(
       orgId,
       req.role,
       editOrganizationDto,
       req.userId ?? null,
+      logo ?? undefined,
     );
   }
 

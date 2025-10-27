@@ -10,6 +10,7 @@ datasource db {
 
 model Organization {
   id String @id @default(uuid())
+  logo String?
   name  String
   email String @unique
   address String

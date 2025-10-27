@@ -7,6 +7,7 @@ import {
 import { DatabaseService } from 'src/database/database.service';
 import { CreateOrganizationDto } from 'src/dto/create-organization.dto';
 import { EditOrganizationDto } from 'src/dto/edit-organization.dto';
+import { CloudinaryService } from 'src/media/cloudinary.service';
 import { MailService } from 'src/service/mail/mail.service';
 
 @Injectable()
@@ -14,12 +15,15 @@ export class OrganizationService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly mailService: MailService,
+    private readonly cloudinary: CloudinaryService,
   ) {}
 
   async createOrganization(
     role: string,
     createOrganizationDto: CreateOrganizationDto,
+    logo?: Express.Multer.File,
   ) {
+    let logoUrl: string | null = null;
     const allowedRoles = ['Root'];
     if (!allowedRoles.includes(role)) {
       throw new UnauthorizedException(
@@ -39,6 +43,15 @@ export class OrganizationService {
       throw new BadRequestException('Organization already exist.');
     }
 
+    if (logo) {
+      try {
+        const uploaded = await this.cloudinary.uploadImage(logo, 'acs');
+        logoUrl = uploaded['secure_url'];
+      } catch (error) {
+        throw new BadRequestException('Image upload failed');
+      }
+    }
+
     const organization = await this.databaseService.organization.create({
       data: {
         name,
@@ -47,6 +60,7 @@ export class OrganizationService {
         contactNumber,
         contactPerson,
         gst: gst || null,
+        logo: logoUrl,
       },
     });
 
@@ -64,7 +78,9 @@ export class OrganizationService {
     role,
     editOrganizationDto: EditOrganizationDto,
     userId,
+    logo?: Express.Multer.File,
   ) {
+    let logoUrl: string | null = null;
     const allowedRoles = ['Root', 'SuperAdmin'];
     if (!allowedRoles.includes(role)) {
       throw new UnauthorizedException(
@@ -107,11 +123,20 @@ export class OrganizationService {
       }
     }
 
+    if (logo) {
+      try {
+        const uploaded = await this.cloudinary.uploadImage(logo, 'acs');
+        logoUrl = uploaded['secure_url'];
+      } catch (error) {
+        throw new BadRequestException('Image upload failed');
+      }
+    }
+
     await this.databaseService.organization.update({
       where: {
         id: targetOrgId,
       },
-      data: { ...editOrganizationDto },
+      data: { ...editOrganizationDto, logo: logoUrl },
     });
 
     return {
