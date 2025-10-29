@@ -10,21 +10,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🚚 Checkout repository
+      - name: 🚚 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: 🔐 Connect & Deploy to EC2
+      - name: 🔐 SSH into EC2 & Deploy
         uses: appleboy/ssh-action@v0.1.10
         with:
-          host: 43.205.175.242
+          host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
             echo "==============================="
-            echo "🚀 Starting Auto Deployment"
+            echo "🚀 Auto Deployment Triggered"
             echo "==============================="
             cd ~/vms
-            echo "🔁 Pulling latest code for backend + frontend..."
+            echo "🔁 Running deploy.sh..."
             bash ~/vms/deploy.sh
-            echo "✅ Deployment complete for latest push!"
+            echo "✅ Deployment completed successfully!"
