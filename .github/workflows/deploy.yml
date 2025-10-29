@@ -18,7 +18,7 @@ jobs:
         with:
           host: 43.205.175.242
           username: ubuntu
-          key: ${{ secrets.EC2_DEPLOY_KEY }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
             echo "==============================="
