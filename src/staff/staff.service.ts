@@ -337,6 +337,7 @@ export class StaffService {
       // Prepare update for UserCredential
       const userUpdateData: any = {
         role: editStaffMemberDto.role as AuthRoleEnum,
+        email: editStaffMemberDto.email,
       };
 
       // If demoted from Admin/SuperAdmin → Staff, disable account
