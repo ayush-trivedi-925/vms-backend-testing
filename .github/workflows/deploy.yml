@@ -1,4 +1,4 @@
-name: 🚀 Auto Deploy to EC2
+name: 🚀 Auto Deploy Backend to EC2
 
 on:
   push:
@@ -8,12 +8,11 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: 🚚 Checkout Repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: 🔐 SSH into EC2 & Deploy
+      - name: 🚀 Deploy via SSH
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -22,9 +21,7 @@ jobs:
           port: 22
           script: |
             echo "==============================="
-            echo "🚀 Auto Deployment Triggered"
+            echo "🚀 Triggering backend deployment"
             echo "==============================="
-            cd ~/vms
-            echo "🔁 Running deploy.sh..."
             bash ~/vms/deploy.sh
             echo "✅ Deployment completed successfully!"
