@@ -7,6 +7,7 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -124,5 +125,36 @@ export class VisitController {
   @Get(':orgId/top-reasons')
   getTopReasons(@Param('orgId') orgId: string, @Query('period') period: any) {
     return this.visitAnalyticsService.getTopReasons(orgId, period);
+  }
+
+  @Get('export')
+  async exportExcel(
+    @Req() req,
+    @Res() res,
+    @Query('filter') filter: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    const orgId = req.orgId;
+    const role = req.role;
+
+    const excelBuffer = await this.visitService.exportCompletedVisits(
+      orgId,
+      role,
+      filter as any,
+      startDate,
+      endDate,
+    );
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="completed_visits.xlsx"`,
+    );
+
+    res.send(excelBuffer);
   }
 }

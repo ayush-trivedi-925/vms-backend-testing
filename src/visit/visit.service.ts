@@ -10,6 +10,7 @@ import { StartVisitDto } from 'src/dto/start-visit.dto';
 import { CloudinaryService } from 'src/media/cloudinary.service';
 import { MailService } from 'src/service/mail/mail.service';
 import * as QRCode from 'qrcode';
+import * as ExcelJS from 'exceljs';
 
 @Injectable()
 export class VisitService {
@@ -105,8 +106,6 @@ export class VisitService {
         reasonOfVisit: true,
       },
     });
-
-    console.log(startVisitDetails);
 
     let qrCodeBuffer: Buffer | null = null;
     try {
@@ -465,5 +464,106 @@ export class VisitService {
       completed: aggregateByDept(completedVisits),
       ongoing: aggregateByDept(ongoingVisits),
     };
+  }
+
+  async exportCompletedVisits(
+    orgId: string,
+    role: string,
+    filter: 'last_day' | 'last_month' | 'last_year' | 'custom',
+    startDate?: string,
+    endDate?: string,
+  ) {
+    const allowedRoles = ['SuperAdmin', 'Admin', 'Root'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException('Not allowed to export visit data.');
+    }
+
+    // TIME FILTER LOGIC //
+    const now = new Date();
+    let from: Date | undefined;
+    let to: Date | undefined = now;
+
+    if (filter === 'last_day') {
+      from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    }
+
+    if (filter === 'last_month') {
+      from = new Date(now);
+      from.setMonth(now.getMonth() - 1);
+    }
+
+    if (filter === 'last_year') {
+      from = new Date(now);
+      from.setFullYear(now.getFullYear() - 1);
+    }
+
+    if (filter === 'custom') {
+      if (!startDate || !endDate) {
+        throw new BadRequestException(
+          'Custom filter requires startDate and endDate.',
+        );
+      }
+      from = new Date(startDate);
+      to = new Date(endDate);
+    }
+
+    // FETCH DATA //
+    const visits = await this.databaseService.visit.findMany({
+      where: {
+        orgId,
+        status: 'COMPLETED',
+        endTime: {
+          gte: from,
+          lte: to,
+        },
+      },
+      include: {
+        staff: {
+          include: { department: true },
+        },
+        reasonOfVisit: true,
+      },
+      orderBy: { endTime: 'desc' },
+    });
+
+    if (visits.length === 0) {
+      throw new BadRequestException(
+        'No completed visits found for the selected period.',
+      );
+    }
+
+    // CREATE EXCEL //
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Completed Visits');
+
+    // Columns
+    sheet.columns = [
+      { header: 'Visitor Name', key: 'fullName', width: 25 },
+      { header: 'Visitor Organization', key: 'visitorOrganization', width: 25 },
+      { header: 'Email', key: 'email', width: 25 },
+      { header: 'Reason', key: 'reason', width: 25 },
+      { header: 'Staff', key: 'staff', width: 20 },
+      { header: 'Department', key: 'department', width: 20 },
+      { header: 'Start Time', key: 'startTime', width: 20 },
+      { header: 'End Time', key: 'endTime', width: 20 },
+    ];
+
+    // Rows
+    visits.forEach((v) => {
+      sheet.addRow({
+        fullName: v.fullName,
+        visitorOrganization: v.visitorOrganization,
+        email: v.email,
+        reason: v.reasonOfVisit?.name ?? '—',
+        staff: v.staff.name,
+        department: v.staff.department?.name ?? '—',
+        startTime: v.startTime.toISOString(),
+        endTime: v.endTime?.toISOString() ?? '',
+      });
+    });
+
+    // RETURN AS BUFFER //
+    const buffer = await workbook.xlsx.writeBuffer();
+    return buffer;
   }
 }
