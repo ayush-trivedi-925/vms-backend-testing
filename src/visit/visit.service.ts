@@ -328,8 +328,42 @@ export class VisitService {
     };
   }
 
+  async getOnGoingVisitDetails(orgId: string, role: string, visitId: string) {
+    const allowedRoles = ['SuperAdmin', 'Admin', 'Root', 'System'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException(
+        'Only admins, superadmin and root user have permission to access on-going visits.',
+      );
+    }
+
+    const visitExists = await this.databaseService.visit.findUnique({
+      where: { id: visitId, status: 'ONGOING' },
+      include: {
+        staff: {
+          include: {
+            department: true,
+          },
+        },
+        reasonOfVisit: true,
+      },
+    });
+
+    if (!visitExists) {
+      throw new NotFoundException('No such visit found.');
+    }
+
+    if (visitExists.orgId !== orgId) {
+      throw new UnauthorizedException('Unauthorized attempt.');
+    }
+
+    return {
+      success: 'true',
+      visitDetails: visitExists,
+    };
+  }
+
   async allOnGoingVisits(orgId: string, role: string) {
-    const allowedRoles = ['SuperAdmin', 'Admin', 'Root'];
+    const allowedRoles = ['SuperAdmin', 'Admin', 'Root', 'System'];
     if (!allowedRoles.includes(role)) {
       throw new UnauthorizedException(
         'Only admins, superadmin and root user have permission to access on-going visits.',

@@ -157,4 +157,13 @@ export class VisitController {
 
     res.send(excelBuffer);
   }
+
+  @Get(':visitId')
+  async getVisitDetails(@Req() req, @Param('visitId') visitId: string) {
+    return this.visitService.getOnGoingVisitDetails(
+      req.orgId,
+      req.role,
+      visitId,
+    );
+  }
 }
