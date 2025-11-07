@@ -44,7 +44,6 @@ export class SystemController {
   async forgotPassword(@Body() body: { email: string }) {
     return this.systemService.forgotPassword(body.email);
   }
-
   @Post('reset-password')
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.systemService.resetPassword(resetPasswordDto);

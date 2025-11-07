@@ -267,6 +267,10 @@ export class SystemService {
       },
     });
 
+    if (!system) {
+      throw new NotFoundException('No account found with this email.');
+    }
+
     // Generate a 6-digit OTP
     const otp = otpGenerator.generate(6, {
       digits: true,
@@ -308,6 +312,7 @@ export class SystemService {
 
     const system = await this.databaseService.systemCredential.findUnique({
       where: { email: normalizedEmail },
+      include: { organization: true },
     });
 
     if (!system) {
