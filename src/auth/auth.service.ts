@@ -358,4 +358,42 @@ export class AuthService {
       message: 'Password reset successfully',
     };
   }
+  async changeOldPassword(
+    userId: string,
+    oldPassword: string,
+    newPassword: string,
+  ) {
+    const userExists = await this.databaseService.userCredential.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (!userExists) {
+      throw new NotFoundException('Invalid user credentials.');
+    }
+
+    const varifyPassword = await bcrypt.compare(
+      oldPassword,
+      userExists.password,
+    );
+
+    if (!varifyPassword) {
+      throw new UnauthorizedException('Invalid credentials!');
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    await this.databaseService.userCredential.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        password: hashedNewPassword,
+      },
+    });
+    return {
+      success: true,
+      message: 'Password updated successfully.',
+    };
+  }
 }

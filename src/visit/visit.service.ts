@@ -11,6 +11,7 @@ import { CloudinaryService } from 'src/media/cloudinary.service';
 import { MailService } from 'src/service/mail/mail.service';
 import * as QRCode from 'qrcode';
 import * as ExcelJS from 'exceljs';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class VisitService {
