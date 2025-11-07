@@ -8,12 +8,16 @@ import { JwtService } from '@nestjs/jwt';
 import { DatabaseService } from 'src/database/database.service';
 import { RegisterSystemUserDto } from 'src/dto/register-system-user.dto';
 import * as bcrypt from 'bcrypt';
+import { MailService } from 'src/service/mail/mail.service';
+import { ResetPasswordDto } from 'src/dto/reset-password.dto';
+const otpGenerator = require('otp-generator');
 
 @Injectable()
 export class SystemService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly jwtService: JwtService,
+    private readonly mailService: MailService,
   ) {}
   async registerSystemUser(
     orgId,
@@ -246,6 +250,110 @@ export class SystemService {
     return {
       success: true,
       message: 'System account deleted successfully.',
+    };
+  }
+
+  async forgotPassword(email: string) {
+    if (!email) {
+      throw new BadRequestException('Provide a valid email address.');
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const system = await this.databaseService.systemCredential.findUnique({
+      where: { email: normalizedEmail },
+      include: {
+        organization: true,
+      },
+    });
+
+    // Generate a 6-digit OTP
+    const otp = otpGenerator.generate(6, {
+      digits: true,
+      lowerCaseAlphabets: false,
+      upperCaseAlphabets: false,
+      specialChars: false,
+    });
+
+    const hashedOtp = await bcrypt.hash(otp, 10);
+
+    // Use upsert to avoid unique constraint errors
+    await this.databaseService.resetTokenSystem.upsert({
+      where: { systemId: system!.id },
+      update: {
+        token: hashedOtp,
+      },
+      create: {
+        systemId: system!.id,
+        token: hashedOtp,
+      },
+    });
+
+    await this.mailService.sendForgotPasswordOTPSystem({
+      email: normalizedEmail,
+      otp,
+      organizationName: system?.organization.name,
+    });
+
+    return {
+      success: true,
+      message: 'Password reset OTP sent successfully. Please check your email.',
+    };
+  }
+
+  async resetPassword(resetPasswordDto: ResetPasswordDto) {
+    const { resetToken, newPassword, email } = resetPasswordDto;
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const system = await this.databaseService.systemCredential.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (!system) {
+      throw new NotFoundException('No system account found with this email.');
+    }
+
+    // Finding if token exists
+
+    const tokenExists = await this.databaseService.resetTokenSystem.findFirst({
+      where: {
+        systemId: system.id,
+      },
+    });
+
+    if (!tokenExists) {
+      throw new BadRequestException('Token doesnt exists.');
+    }
+
+    const verifyOtp = await bcrypt.compare(resetToken, tokenExists?.token);
+
+    if (!verifyOtp) {
+      throw new BadRequestException('Invalid OTP!');
+    }
+
+    // Reseting the password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    // Updating the password
+    await this.databaseService.systemCredential.update({
+      where: {
+        id: system.id,
+      },
+      data: {
+        password: hashedNewPassword,
+      },
+    });
+
+    // Deleting the reset token
+    await this.databaseService.resetTokenSystem.delete({
+      where: {
+        id: tokenExists.id,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Password reset successfully',
     };
   }
 }

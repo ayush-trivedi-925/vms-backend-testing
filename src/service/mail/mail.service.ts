@@ -181,6 +181,35 @@ export class MailService {
     await this.transporter.sendMail(mailOptions);
   }
 
+  async sendForgotPasswordOTPSystem(details: any) {
+    const mailOptions = {
+      from: `"Visitor Management System" <no-reply@segueit.com>`,
+      to: details.email,
+      subject: `Your OTP for Password Reset - SegueIT Visitor Management System`,
+      html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #2b6cb0;">Password Reset Request</h2>
+        <p>${details.organizationName || 'User'},</p>
+
+        <p>We received a request to reset your password for the <b>SegueIT Visitor Management System</b> account associated with this email address.</p>
+
+        <p>Your One-Time Password (OTP) for verification is:</p>
+
+        <div style="background: #f3f4f6; padding: 12px 18px; border-radius: 8px; display: inline-block; margin: 10px 0;">
+          <h1 style="color: #2b6cb0; letter-spacing: 4px; margin: 0;">${details.otp}</h1>
+        </div>
+
+        <p>If you did not request a password reset, you can safely ignore this email — your password will remain unchanged.</p>
+
+        <p>Thank you,<br/>
+        <b>SegueIT Visitor Management Team</b></p>
+      </div>
+    `,
+    };
+
+    await this.transporter.sendMail(mailOptions);
+  }
+
   async VisitEndToHost(details: any) {
     const checkOutTime = this.formatDate(details.endTime);
     const checkInTime = this.formatDate(details.startTime);

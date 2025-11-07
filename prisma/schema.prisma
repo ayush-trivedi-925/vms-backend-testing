@@ -101,6 +101,7 @@ model SystemCredential {
   password  String
   role String @default("System")
   refreshToken  RefreshToken[]
+  resetTokenSystem  ResetTokenSystem[]
 }
 
 model Department {
@@ -128,6 +129,14 @@ model ResetToken {
   token String @unique
   userId  String @unique
   userCredential  UserCredential  @relation(fields: [userId],  references: [id], onDelete: Cascade)
+  
+}
+
+model ResetTokenSystem {
+    id String @id @default(uuid())
+  token String @unique
+  systemId String @unique
+  systemCredential SystemCredential @relation(fields: [systemId], references: [id], onDelete: Cascade)
 }
 
 

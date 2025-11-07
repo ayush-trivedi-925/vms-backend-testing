@@ -11,6 +11,7 @@ import {
 import { SystemService } from './system.service';
 import { RegisterSystemUserDto } from 'src/dto/register-system-user.dto';
 import { AuthGuard } from 'src/guard/auth.guard';
+import { ResetPasswordDto } from 'src/dto/reset-password.dto';
 
 @Controller('system')
 export class SystemController {
@@ -37,6 +38,16 @@ export class SystemController {
   @Post('refresh-system-access-token')
   async refreshSystemAccessToken(@Body() data: { token: string }) {
     return this.systemService.refreshSystemAccessToken(data.token);
+  }
+
+  @Post('forgot-password')
+  async forgotPassword(@Body() body: { email: string }) {
+    return this.systemService.forgotPassword(body.email);
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.systemService.resetPassword(resetPasswordDto);
   }
 
   @UseGuards(AuthGuard)
