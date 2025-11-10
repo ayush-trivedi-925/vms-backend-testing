@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Post,
+  Put,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -12,6 +13,7 @@ import { SystemService } from './system.service';
 import { RegisterSystemUserDto } from 'src/dto/register-system-user.dto';
 import { AuthGuard } from 'src/guard/auth.guard';
 import { ResetPasswordDto } from 'src/dto/reset-password.dto';
+import { EditSystemUserDto } from 'src/dto/edit-system-user.dto';
 
 @Controller('system')
 export class SystemController {
@@ -50,6 +52,29 @@ export class SystemController {
   }
 
   @UseGuards(AuthGuard)
+  @Post('verify')
+  async verifySecureCode(
+    @Req() req,
+    @Body()
+    data: {
+      secretCode: string;
+    },
+  ) {
+    return this.systemService.verifySecretCode(
+      req.orgId,
+      req.role,
+      req.systemId,
+      data.secretCode,
+    );
+  }
+
+  @UseGuards(AuthGuard)
+  @Get(':systemId')
+  async fetchSystemDetails(@Req() req, @Param('systemId') systemId: string) {
+    return this.systemService.fetchSystemDetails(req.orgId, req.role, systemId);
+  }
+
+  @UseGuards(AuthGuard)
   @Get('')
   async getAllSystemAccounts(@Req() req) {
     return this.systemService.getAllSytemUser(req.orgId, req.role);
@@ -62,6 +87,21 @@ export class SystemController {
       req.orgId,
       req.userId,
       req.role,
+    );
+  }
+
+  @UseGuards(AuthGuard)
+  @Put(':systemId')
+  async updateSystemDetails(
+    @Req() req,
+    @Param('systemId') systemId: string,
+    @Body() editSystemUserDto: EditSystemUserDto,
+  ) {
+    return this.systemService.editSystemAccount(
+      req.orgId,
+      req.role,
+      systemId,
+      editSystemUserDto,
     );
   }
 }

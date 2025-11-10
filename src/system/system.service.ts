@@ -10,6 +10,7 @@ import { RegisterSystemUserDto } from 'src/dto/register-system-user.dto';
 import * as bcrypt from 'bcrypt';
 import { MailService } from 'src/service/mail/mail.service';
 import { ResetPasswordDto } from 'src/dto/reset-password.dto';
+import { EditSystemUserDto } from 'src/dto/edit-system-user.dto';
 const otpGenerator = require('otp-generator');
 
 @Injectable()
@@ -25,7 +26,7 @@ export class SystemService {
     role,
     registerSystemUserDto: RegisterSystemUserDto,
   ) {
-    const { email, password } = registerSystemUserDto;
+    const { email, password, secretCode } = registerSystemUserDto;
     const allowedRoles = ['SuperAdmin'];
     const normalizedEmail = email.toLowerCase().trim();
     if (!allowedRoles.includes(role)) {
@@ -68,6 +69,7 @@ export class SystemService {
         orgId,
         email: normalizedEmail,
         password: hashedPassword,
+        secretCode,
       },
     });
     return {
@@ -120,6 +122,81 @@ export class SystemService {
       refreshToken,
     };
   }
+
+  async editSystemAccount(
+    orgId,
+    role,
+    systemId,
+    editSystemUserDto: EditSystemUserDto,
+  ) {
+    const allowedRoles = ['SuperAdmin'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException(
+        'Only superadmin can update system account details!',
+      );
+    }
+
+    const { secretCode } = editSystemUserDto;
+
+    const systemExists = await this.databaseService.systemCredential.findUnique(
+      {
+        where: {
+          id: systemId,
+        },
+      },
+    );
+    if (!systemExists) {
+      throw new NotFoundException('Invalid systemId');
+    }
+
+    if (systemExists?.orgId !== orgId) {
+      throw new UnauthorizedException('Unauthorized update attempt');
+    }
+
+    await this.databaseService.systemCredential.update({
+      where: {
+        id: systemExists.id,
+      },
+      data: {
+        secretCode,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'System details updated successfully!',
+    };
+  }
+
+  async fetchSystemDetails(orgId, role, systemId) {
+    const allowedRoles = ['SuperAdmin'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException('Unauthorized fetch attempt.');
+    }
+
+    const systemExists = await this.databaseService.systemCredential.findUnique(
+      {
+        where: {
+          id: systemId,
+        },
+      },
+    );
+
+    if (!systemExists) {
+      throw new NotFoundException('Invalid system credentials.');
+    }
+    if (systemExists.orgId !== orgId) {
+      throw new UnauthorizedException(
+        'nauthorized fetch attempt. Mismatch in orgId.',
+      );
+    }
+
+    return {
+      success: true,
+      secretCode: systemExists.secretCode,
+    };
+  }
+
   async refreshSystemAccessToken(token: string) {
     const tokenExists = await this.databaseService.refreshToken.findUnique({
       where: {
@@ -185,6 +262,7 @@ export class SystemService {
         select: {
           id: true,
           email: true,
+          secretCode: true,
         },
       },
     );
@@ -203,6 +281,39 @@ export class SystemService {
       numberOfSystemAccounts: systemAccounts.length,
       systemAccounts,
     };
+  }
+
+  async verifySecretCode(
+    orgId: string,
+    role: string,
+    systemId: string,
+    secretCode: string,
+  ) {
+    // Role check
+    if (role !== 'System') {
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    // Check system exists
+    const system = await this.databaseService.systemCredential.findUnique({
+      where: { id: systemId },
+    });
+
+    if (!system) {
+      throw new NotFoundException('Invalid system ID');
+    }
+
+    // Organization match check
+    if (system.orgId !== orgId) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    // Secret code check
+    if (system.secretCode !== secretCode) {
+      throw new UnauthorizedException('Incorrect secret code');
+    }
+
+    return { success: true };
   }
 
   async deleteSystemAccount(systemId, orgId, userId, role) {

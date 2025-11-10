@@ -99,6 +99,7 @@ model SystemCredential {
   organization  Organization @relation(fields: [orgId],references: [id], onDelete: Cascade)
   email String @unique
   password  String
+  secretCode  String
   role String @default("System")
   refreshToken  RefreshToken[]
   resetTokenSystem  ResetTokenSystem[]
