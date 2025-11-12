@@ -52,6 +52,16 @@ export class SystemController {
   }
 
   @UseGuards(AuthGuard)
+  @Get('/status')
+  async fetchSystemActivityStatus(@Req() req) {
+    return this.systemService.fetchSystemActivityStatus(
+      req.orgId,
+      req.role,
+      req.systemId,
+    );
+  }
+
+  @UseGuards(AuthGuard)
   @Post('verify')
   async verifySecureCode(
     @Req() req,
@@ -79,6 +89,17 @@ export class SystemController {
   async getAllSystemAccounts(@Req() req) {
     return this.systemService.getAllSytemUser(req.orgId, req.role);
   }
+
+  @UseGuards(AuthGuard)
+  @Post('logout')
+  async logoutSystemAccount(@Req() req) {
+    return this.systemService.logoutSystemAccount(
+      req.orgId,
+      req.systemId,
+      req.role,
+    );
+  }
+
   @UseGuards(AuthGuard)
   @Delete(':systemId')
   async deleteSystemAccount(@Param('systemId') systemId: string, @Req() req) {

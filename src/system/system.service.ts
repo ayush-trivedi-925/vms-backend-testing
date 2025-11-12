@@ -102,6 +102,12 @@ export class SystemService {
       throw new UnauthorizedException('Invalid credentials.');
     }
 
+    if (systemAccountExists.activityStatus === 'LoggedIn') {
+      throw new UnauthorizedException(
+        'User already logged in on another device. Please log out first.',
+      );
+    }
+
     const accessToken = await this.jwtService.sign({
       systemId: systemAccountExists.id,
       orgId: systemAccountExists.orgId,
@@ -113,6 +119,15 @@ export class SystemService {
         token: refreshToken,
         expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         systemId: systemAccountExists.id,
+      },
+    });
+
+    await this.databaseService.systemCredential.update({
+      where: {
+        id: systemAccountExists.id,
+      },
+      data: {
+        activityStatus: 'LoggedIn',
       },
     });
     return {
@@ -194,6 +209,39 @@ export class SystemService {
     return {
       success: true,
       secretCode: systemExists.secretCode,
+    };
+  }
+
+  async fetchSystemActivityStatus(orgId, role, systemId) {
+    if (!orgId || !role || !systemId) {
+      throw new BadRequestException('Invalid token!');
+    }
+
+    const allowedRoles = ['System'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException('Unauthorized fetch attempt.');
+    }
+
+    const systemExists = await this.databaseService.systemCredential.findUnique(
+      {
+        where: {
+          id: systemId,
+        },
+      },
+    );
+
+    if (!systemExists) {
+      throw new NotFoundException('Invalid system credentials.');
+    }
+    if (systemExists.orgId !== orgId) {
+      throw new UnauthorizedException(
+        'nauthorized fetch attempt. Mismatch in orgId.',
+      );
+    }
+
+    return {
+      success: true,
+      activityStatus: systemExists.activityStatus,
     };
   }
 
@@ -470,6 +518,61 @@ export class SystemService {
     return {
       success: true,
       message: 'Password reset successfully',
+    };
+  }
+
+  async logoutSystemAccount(orgId, systemId, role) {
+    const allowedRoles = ['System'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException('Access denied based on role.');
+    }
+
+    const orgExists = await this.databaseService.organization.findUnique({
+      where: {
+        id: orgId,
+      },
+    });
+
+    if (!orgExists) {
+      throw new BadRequestException('Invalid organization.');
+    }
+    const systemExists = await this.databaseService.systemCredential.findUnique(
+      {
+        where: {
+          id: systemId,
+        },
+      },
+    );
+
+    if (!systemExists) {
+      throw new BadRequestException('Invalid system credentials.');
+    }
+
+    if (systemExists.orgId !== orgId) {
+      throw new UnauthorizedException('Unauthorized attempt');
+    }
+
+    if (systemExists.activityStatus !== 'LoggedIn') {
+      throw new BadRequestException('User not loggedIn.');
+    }
+
+    await this.databaseService.systemCredential.update({
+      where: {
+        id: systemId,
+      },
+      data: {
+        activityStatus: 'LoggedOut',
+      },
+    });
+
+    await this.databaseService.refreshToken.deleteMany({
+      where: {
+        systemId: systemId,
+      },
+    });
+    return {
+      success: true,
+      message: 'Logout successfull.',
     };
   }
 }

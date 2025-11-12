@@ -100,6 +100,7 @@ model SystemCredential {
   email String @unique
   password  String
   secretCode  String
+  activityStatus  LoginStatus @default(LoggedOut)
   role String @default("System")
   refreshToken  RefreshToken[]
   resetTokenSystem  ResetTokenSystem[]
@@ -162,4 +163,9 @@ enum MemberRoleEnum {
 enum AccountStatusEnum {
   Active
   Disabled
+}
+
+enum LoginStatus {
+  LoggedIn
+  LoggedOut
 }
