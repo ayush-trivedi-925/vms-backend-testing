@@ -311,6 +311,7 @@ export class SystemService {
           id: true,
           email: true,
           secretCode: true,
+          activityStatus: true,
         },
       },
     );
@@ -573,6 +574,65 @@ export class SystemService {
     return {
       success: true,
       message: 'Logout successfull.',
+    };
+  }
+
+  async logoutAllSystemAccounts(orgId, role, userId) {
+    const allowedRoles = ['SuperAdmin'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException('Unauthorized update attempt.');
+    }
+
+    const organizationExists =
+      await this.databaseService.organization.findUnique({
+        where: {
+          id: orgId,
+        },
+      });
+
+    if (!organizationExists) {
+      throw new NotFoundException('Invalid organization.');
+    }
+
+    const userExists = await this.databaseService.userCredential.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (!userExists) {
+      throw new NotFoundException('Invalid user credentials.');
+    }
+
+    if (userExists.orgId !== orgId) {
+      throw new UnauthorizedException('Unauthorized update attempt.');
+    }
+
+    const activeSystemAccounts =
+      await this.databaseService.systemCredential.findMany({
+        where: {
+          orgId,
+          activityStatus: 'LoggedIn',
+        },
+      });
+
+    if (activeSystemAccounts.length === 0) {
+      throw new NotFoundException('All accounts are logged out');
+    }
+
+    await this.databaseService.systemCredential.updateMany({
+      where: {
+        orgId,
+        activityStatus: 'LoggedIn',
+      },
+      data: {
+        activityStatus: 'LoggedOut',
+      },
+    });
+
+    return {
+      success: true,
+      message: 'All logged in accounts have been logged out.',
     };
   }
 }

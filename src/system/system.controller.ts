@@ -125,4 +125,14 @@ export class SystemController {
       editSystemUserDto,
     );
   }
+
+  @UseGuards(AuthGuard)
+  @Post('logoutall')
+  async logoutAllSystemAccounts(@Req() req) {
+    return this.systemService.logoutAllSystemAccounts(
+      req.orgId,
+      req.role,
+      req.userId,
+    );
+  }
 }
