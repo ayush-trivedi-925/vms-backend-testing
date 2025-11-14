@@ -52,6 +52,23 @@ export class SystemService {
       throw new BadRequestException("User doesn't exists.");
     }
 
+    if (userExists.orgId !== orgId) {
+      throw new UnauthorizedException('Unauthenticated addition attempt.');
+    }
+
+    const systemAccountCount =
+      await this.databaseService.systemCredential.count({
+        where: { orgId },
+      });
+
+    if (
+      organizationExists.accountLimit !== null &&
+      systemAccountCount >= organizationExists.accountLimit
+    ) {
+      throw new BadRequestException(
+        'Maximum number of system account limit have been exceeded.',
+      );
+    }
     const systemAccountExists =
       await this.databaseService.systemCredential.findUnique({
         where: {
@@ -202,7 +219,7 @@ export class SystemService {
     }
     if (systemExists.orgId !== orgId) {
       throw new UnauthorizedException(
-        'nauthorized fetch attempt. Mismatch in orgId.',
+        'Unauthorized fetch attempt. Mismatch in orgId.',
       );
     }
 

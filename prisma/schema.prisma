@@ -17,6 +17,7 @@ model Organization {
   contactNumber String
   contactPerson String
   gst String?
+  accountLimit  Int @default(5)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   visits Visit[]

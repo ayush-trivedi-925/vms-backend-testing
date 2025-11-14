@@ -1,4 +1,5 @@
-import { IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class EditOrganizationDto {
   @IsOptional()
@@ -24,4 +25,9 @@ export class EditOrganizationDto {
   @IsOptional()
   @IsString()
   gst?: string;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  accountLimit?: number;
 }

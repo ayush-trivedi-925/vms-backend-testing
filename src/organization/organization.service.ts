@@ -30,8 +30,15 @@ export class OrganizationService {
         'Only root user can create an organization.',
       );
     }
-    const { name, email, address, contactNumber, contactPerson, gst } =
-      createOrganizationDto;
+    const {
+      name,
+      email,
+      address,
+      contactNumber,
+      contactPerson,
+      gst,
+      accountLimit,
+    } = createOrganizationDto;
     const normalizedEmail = email.toLowerCase().trim();
     const organizationExists =
       await this.databaseService.organization.findUnique({
@@ -61,6 +68,7 @@ export class OrganizationService {
         contactPerson,
         gst: gst || null,
         logo: logoUrl,
+        accountLimit,
       },
     });
 
@@ -119,6 +127,26 @@ export class OrganizationService {
       if (superAdminExist.orgId !== orgExists.id) {
         throw new UnauthorizedException(
           'Unauthorized updated attempt. SuperAdmin belongs to different organization.',
+        );
+      }
+
+      // Prevent SuperAdmin from editing accountLimit
+      if ('accountLimit' in editOrganizationDto) {
+        delete editOrganizationDto.accountLimit;
+      }
+    }
+
+    if (editOrganizationDto.accountLimit) {
+      const systemAccountCount =
+        await this.databaseService.systemCredential.count({
+          where: {
+            orgId,
+          },
+        });
+
+      if (systemAccountCount > editOrganizationDto.accountLimit) {
+        throw new BadRequestException(
+          `Account limit too low. Number of current system accounts: ${systemAccountCount}`,
         );
       }
     }

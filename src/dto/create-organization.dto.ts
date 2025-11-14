@@ -1,4 +1,13 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsEmail,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export class CreateOrganizationDto {
   @IsString()
@@ -24,4 +33,9 @@ export class CreateOrganizationDto {
   @IsString()
   @IsOptional()
   gst: string;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  accountLimit: number;
 }
