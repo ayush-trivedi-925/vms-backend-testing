@@ -10,10 +10,21 @@ import { DatabaseService } from 'src/database/database.service';
 import { AddStaffMemberDto } from 'src/dto/add-staff-member.dto';
 import { EditStaffMemberDto } from 'src/dto/edit-staff-member.dto';
 import * as bcrypt from 'bcrypt';
+import { MailService } from 'src/service/mail/mail.service';
 
 @Injectable()
 export class StaffService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly mailService: MailService,
+  ) {}
+
+  private generateOneTimePassword(orgName: string): string {
+    const prefix = orgName.substring(0, 3).toUpperCase();
+    const randomDigits = Math.floor(100 + Math.random() * 900); // 100–999
+    return `${prefix}${randomDigits}`;
+  }
+
   async addStaffMember(
     orgId: string | null,
     role: string,
@@ -304,10 +315,10 @@ export class StaffService {
       );
     }
 
-    // Check if updating to SuperAdmin
+    // If updating this staff to SuperAdmin
     if (
       editStaffMemberDto.role === 'SuperAdmin' &&
-      staff.role !== 'SuperAdmin' // prevent blocking if they are already superadmin
+      staff.role !== 'SuperAdmin'
     ) {
       const existingSuperAdmin =
         await this.databaseService.userCredential.findFirst({
@@ -315,15 +326,27 @@ export class StaffService {
             orgId: targetOrgId,
             role: 'SuperAdmin',
           },
+          include: { staff: true },
         });
 
-      if (existingSuperAdmin) {
-        throw new BadRequestException(
-          'This organization already has a SuperAdmin.',
-        );
+      // If another SuperAdmin exists - demote them to Admin
+      if (existingSuperAdmin && existingSuperAdmin.staff?.id !== staffId) {
+        await this.databaseService.userCredential.update({
+          where: { id: existingSuperAdmin.id },
+          data: {
+            role: 'Admin',
+          },
+        });
+
+        // Also update staff table role
+        await this.databaseService.staff.update({
+          where: { id: existingSuperAdmin.staff?.id },
+          data: {
+            role: 'Admin',
+          },
+        });
       }
     }
-
     // CASE 1: Staff already linked to UserCredential
     if (staff.userId) {
       // Update Staff record
@@ -340,7 +363,7 @@ export class StaffService {
         email: editStaffMemberDto.email,
       };
 
-      // If demoted from Admin/SuperAdmin → Staff, disable account
+      // If demoted from Admin/SuperAdmin - Staff, disable account
       if (
         (staff.role === 'Admin' || staff.role === 'SuperAdmin') &&
         editStaffMemberDto.role === 'Staff'
@@ -352,7 +375,7 @@ export class StaffService {
           },
         });
       }
-      // If demoted from Staff → Admin/SuperAdmin, Active account
+      // If demoted from Staff - Admin/SuperAdmin, Active account
       if (
         (staff.role === 'Staff' && editStaffMemberDto.role === 'Admin') ||
         editStaffMemberDto.role === 'SuperAdmin'
@@ -374,7 +397,7 @@ export class StaffService {
     }
 
     // CASE 2: Staff does not have a linked UserCredential
-    const oneTimePassword = 'SegueIT@123';
+    const oneTimePassword = this.generateOneTimePassword(organization.name);
     const hashedPassword = await bcrypt.hash(oneTimePassword, 10);
 
     // Update staff record
@@ -398,6 +421,15 @@ export class StaffService {
         },
       },
     });
+
+    const selectedRole = editStaffMemberDto.role as string;
+
+    await this.mailService.sendUserRegistrationMail(
+      staff,
+      organization,
+      oneTimePassword,
+      selectedRole,
+    );
 
     return {
       success: true,
@@ -472,6 +504,55 @@ export class StaffService {
     return {
       success: true,
       message: 'Staff member deleted successfully.',
+    };
+  }
+
+  async getSuperAdminDetails(orgId, role, userId, qOrgId) {
+    const allowedRoles = ['SuperAdmin', 'Root'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException('Invalid role.');
+    }
+
+    const targetOrgId = role === 'Root' && qOrgId ? qOrgId : orgId;
+    if (!targetOrgId) {
+      throw new BadRequestException('Organization ID is required.');
+    }
+
+    const organizationExists =
+      await this.databaseService.organization.findUnique({
+        where: {
+          id: targetOrgId,
+        },
+      });
+
+    if (!organizationExists) {
+      throw new NotFoundException('Invalid organization.');
+    }
+
+    if (role !== 'Root') {
+      const userExists = await this.databaseService.userCredential.findUnique({
+        where: {
+          id: userId,
+        },
+      });
+      if (userExists?.orgId !== targetOrgId) {
+        throw new UnauthorizedException('Credentials mismatch.');
+      }
+    }
+
+    const superadminDetails = await this.databaseService.staff.findFirst({
+      where: {
+        orgId: targetOrgId,
+        role: 'SuperAdmin',
+      },
+      include: {
+        department: true,
+      },
+    });
+
+    return {
+      success: true,
+      superadminDetails,
     };
   }
 }

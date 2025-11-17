@@ -249,4 +249,27 @@ export class OrganizationService {
       message: 'Organization has been deleted successfully.',
     };
   }
+
+  async getSystemAccountLimit(orgId, role) {
+    const allowedRoles = ['SuperAdmin'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException('Invalid role.');
+    }
+
+    const organizationExists =
+      await this.databaseService.organization.findUnique({
+        where: {
+          id: orgId,
+        },
+      });
+
+    if (!organizationExists) {
+      throw new NotFoundException('Invalid organization.');
+    }
+
+    return {
+      success: true,
+      accountLimit: organizationExists.accountLimit,
+    };
+  }
 }

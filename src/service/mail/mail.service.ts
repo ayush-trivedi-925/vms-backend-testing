@@ -261,4 +261,72 @@ export class MailService {
     };
     await this.transporter.sendMail(mailOptions);
   }
+
+  async sendUserRegistrationMail(
+    staff: any,
+    organization: any,
+    oneTimePassword: string,
+    role: string,
+  ) {
+    const mailOptions = {
+      from: `"${organization.name} Account Setup" <noreply@yourapp.com>`,
+      to: staff.email,
+      subject: `Your ${organization.name} account has been created`,
+      html: `
+      <div style="font-family: Arial, sans-serif; color: #333; padding: 20px;">
+        <h2 style="color: #0078D7;">Welcome to ${organization.name}</h2>
+
+        <p>Dear <strong>${staff.name}</strong>,</p>
+
+        <p>Your account has been created with <strong>${organization.name}</strong>.</p>
+
+        <p><b>Login Details:</b></p>
+
+        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+      <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;">
+              <strong>Role:</strong>
+            </td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;">
+              ${role}
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;">
+              <strong>Email:</strong>
+            </td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;">
+              ${staff.email}
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;">
+              <strong>One-Time Password:</strong>
+            </td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;">
+              <span style="font-size: 16px; color: #0078D7;"><b>${oneTimePassword}</b></span>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin-top: 20px;">
+          Please use this one-time password to log in and set up your new password.
+        </p>
+
+        <p>Thank you,</p>
+        <p style="font-weight: bold;">${organization.name} Team</p>
+
+        <hr style="margin-top: 30px; border: none; border-bottom: 1px solid #ddd;" />
+
+        <p style="font-size: 12px; color: #555;">
+          This is an automated message. Please do not reply.
+        </p>
+      </div>
+    `,
+    };
+
+    await this.transporter.sendMail(mailOptions);
+  }
 }
