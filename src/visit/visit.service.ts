@@ -134,7 +134,7 @@ export class VisitService {
       startVisitDetails: {
         visitorId: startVisitDetails.id,
         fullName,
-        email,
+        email: normalizedEmail,
         visitorOrganization,
         hostDetails: {
           name: startVisitDetails.staff.name,
@@ -384,6 +384,9 @@ export class VisitService {
         },
         reasonOfVisit: true,
       },
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
 
     if (allOnGoingVisits.length === 0) {
@@ -419,6 +422,9 @@ export class VisitService {
           },
         },
         reasonOfVisit: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
       },
     });
 

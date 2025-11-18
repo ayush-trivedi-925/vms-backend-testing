@@ -15,8 +15,6 @@ export class MailService {
         user: this.configService.get<string>('mail.user'),
         pass: this.configService.get<string>('mail.password'),
       },
-      debug: true,
-      logger: true,
     });
   }
 

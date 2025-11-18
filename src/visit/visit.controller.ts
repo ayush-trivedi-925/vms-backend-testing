@@ -50,13 +50,6 @@ export class VisitController {
     @Body() endVisitDto: EndVisitDto,
     @UploadedFile() checkOutPicture?: Express.Multer.File,
   ) {
-    console.log('Checkout body:', {
-      orgId: req.orgId,
-      endVisitDto,
-      systemId: req.systemId ?? null,
-      role: req.role ?? null,
-    });
-    console.log('Checkout file:', checkOutPicture);
     return this.visitService.endVisit(
       req.orgId,
       endVisitDto,
