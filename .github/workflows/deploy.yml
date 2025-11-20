@@ -18,7 +18,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
+          port: 2200
           script: |
             echo "==============================="
             echo "🚀 Triggering backend deployment"
