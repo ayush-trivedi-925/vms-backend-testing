@@ -125,11 +125,16 @@ export class SystemService {
       );
     }
 
-    const accessToken = await this.jwtService.sign({
-      systemId: systemAccountExists.id,
-      orgId: systemAccountExists.orgId,
-      role: systemAccountExists.role,
-    });
+    const accessToken = await this.jwtService.sign(
+      {
+        systemId: systemAccountExists.id,
+        orgId: systemAccountExists.orgId,
+        role: systemAccountExists.role,
+      },
+      {
+        expiresIn: '7d',
+      },
+    );
     const refreshToken = crypto.randomUUID();
     await this.databaseService.refreshToken.create({
       data: {

@@ -8,6 +8,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { Observable } from 'rxjs';
+import { TokenExpiredError } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -29,6 +30,9 @@ export class AuthGuard implements CanActivate {
       request.systemId = decode.systemId;
       return true;
     } catch (error) {
+      if (error instanceof TokenExpiredError) {
+        throw new UnauthorizedException('Token expired!');
+      }
       Logger.error(error.message);
       throw new UnauthorizedException('Invalid token!');
     }

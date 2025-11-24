@@ -31,7 +31,7 @@ import { ReasonModule } from './reason/reason.module';
       useFactory: async (config) => ({
         secret: config.get('jwt.secret'),
         signOptions: {
-          expiresIn: '7d',
+          expiresIn: '10m',
         },
       }),
       inject: [ConfigService],

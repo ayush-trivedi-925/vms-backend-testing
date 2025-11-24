@@ -28,7 +28,7 @@ export class AuthController {
       body.newPassword,
     );
   }
-  @Post('refresh-user-access-token')
+  @Post('refresh-token')
   async refreshAccessToken(@Body() body: { refreshToken: string }) {
     return this.authService.refreshAccessToken(body.refreshToken);
   }
@@ -54,5 +54,11 @@ export class AuthController {
       data.oldPassword,
       data.newPassword,
     );
+  }
+
+  @UseGuards(AuthGuard)
+  @Post('logout')
+  async logout(@Req() req) {
+    return this.authService.logout(req.userId, req.role);
   }
 }

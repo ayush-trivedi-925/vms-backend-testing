@@ -184,7 +184,7 @@ export class AuthService {
       success: true,
       message: 'Login successful.',
       accessToken,
-      refreshToken,
+      refreshToken: refreshToken,
       role: user.role,
     };
   }
@@ -249,7 +249,8 @@ export class AuthService {
       success: true,
       message: 'Token refreshed.',
       accessToken: accessToken,
-      refreshToken: newRefreshToken,
+      newRefreshToken: newRefreshToken,
+      newRole: userExists.role,
     };
   }
   async forgotPassword(email: string) {
@@ -394,6 +395,32 @@ export class AuthService {
     return {
       success: true,
       message: 'Password updated successfully.',
+    };
+  }
+
+  async logout(userId: string, role: string) {
+    const allowedRoles = ['Root', 'SuperAdmin', 'Admin'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException('Invalid role.');
+    }
+    const userExists = await this.databaseService.userCredential.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+    if (!userExists) {
+      throw new NotFoundException("User doesn't exists.");
+    }
+
+    await this.databaseService.refreshToken.deleteMany({
+      where: {
+        userId,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Logout successfull.',
     };
   }
 }
