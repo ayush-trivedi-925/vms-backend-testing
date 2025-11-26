@@ -70,6 +70,16 @@ export class StaffController {
       qOrgId,
     );
   }
+
+  @Get('user')
+  async getStaffMemberDetailsUserId(@Req() req) {
+    return this.staffService.getStaffMemberDetailsUserId(
+      req.orgId,
+      req.role,
+      req.userId,
+    );
+  }
+
   @Get(':staffId')
   async getStaffMemberDetails(
     @Req() req,

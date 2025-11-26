@@ -278,6 +278,56 @@ export class StaffService {
     };
   }
 
+  async getStaffMemberDetailsUserId(
+    orgId: string | null,
+    role: string,
+    userId: string,
+  ) {
+    const allowedRoles = ['SuperAdmin', 'Admin'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException(
+        'Only superadmin, and admin can access the staff members of an organization.',
+      );
+    }
+    // Decide which orgId to use
+    const targetOrgId = orgId;
+
+    console.log(userId);
+
+    if (!targetOrgId) {
+      throw new BadRequestException('Organization ID is required.');
+    }
+    const organizationExists =
+      await this.databaseService.organization.findUnique({
+        where: { id: targetOrgId },
+      });
+
+    if (!organizationExists) {
+      throw new NotFoundException("Organization doesn't exist.");
+    }
+
+    const staffExists = await this.databaseService.staff.findUnique({
+      where: {
+        userId,
+      },
+      include: {
+        organization: true,
+      },
+    });
+    if (!staffExists) {
+      throw new NotFoundException("Staff member doesn't exist.");
+    }
+    if (staffExists.orgId !== targetOrgId) {
+      throw new UnauthorizedException(
+        'This staff member does not belong to the specified organization.',
+      );
+    }
+    return {
+      success: true,
+      staffDetails: staffExists,
+    };
+  }
+
   async editStaffMemberDetails(
     orgId: string | null,
     role: string,
