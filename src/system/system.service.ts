@@ -125,11 +125,14 @@ export class SystemService {
       );
     }
 
+    const sessionId = crypto.randomUUID();
+
     const accessToken = await this.jwtService.sign(
       {
         systemId: systemAccountExists.id,
         orgId: systemAccountExists.orgId,
         role: systemAccountExists.role,
+        sessionId,
       },
       {
         expiresIn: '7d',
@@ -150,6 +153,7 @@ export class SystemService {
       },
       data: {
         activityStatus: 'LoggedIn',
+        sessionId,
       },
     });
     return {
@@ -585,6 +589,7 @@ export class SystemService {
       },
       data: {
         activityStatus: 'LoggedOut',
+        sessionId: null,
       },
     });
 
@@ -642,6 +647,14 @@ export class SystemService {
       throw new NotFoundException('All accounts are logged out');
     }
 
+    await this.databaseService.refreshToken.deleteMany({
+      where: {
+        systemId: {
+          in: activeSystemAccounts.map((x) => x.id),
+        },
+      },
+    });
+
     await this.databaseService.systemCredential.updateMany({
       where: {
         orgId,
@@ -649,6 +662,7 @@ export class SystemService {
       },
       data: {
         activityStatus: 'LoggedOut',
+        sessionId: null,
       },
     });
 

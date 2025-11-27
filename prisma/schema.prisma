@@ -102,6 +102,7 @@ model SystemCredential {
   password  String
   secretCode  String?
   activityStatus  LoginStatus @default(LoggedOut)
+  sessionId String?
   role String @default("System")
   refreshToken  RefreshToken[]
   resetTokenSystem  ResetTokenSystem[]

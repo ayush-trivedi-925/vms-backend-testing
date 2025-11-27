@@ -9,25 +9,66 @@ import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { Observable } from 'rxjs';
 import { TokenExpiredError } from '@nestjs/jwt';
+import { DatabaseService } from 'src/database/database.service';
+
+interface JwtPayload {
+  orgId: string;
+  userId?: string;
+  role: string;
+  systemId?: string;
+  sessionId?: string;
+}
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService) {}
-  canActivate(
-    context: ExecutionContext,
-  ): boolean | Promise<boolean> | Observable<boolean> {
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly databaseService: DatabaseService,
+  ) {}
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
     if (!token) {
       throw new UnauthorizedException('Invalid token!');
     }
     try {
-      const decode = this.jwtService.verify(token);
-      console.log(decode);
-      request.orgId = decode.orgId;
-      request.userId = decode.userId;
-      request.role = decode.role;
-      request.systemId = decode.systemId;
+      const decode = this.jwtService.verify(token) as JwtPayload;
+
+      if (decode.systemId) {
+        const systemUser =
+          await this.databaseService.systemCredential.findUnique({
+            where: { id: decode.systemId },
+          });
+
+        if (!systemUser) {
+          throw new UnauthorizedException('System user not found');
+        }
+
+        if (systemUser.activityStatus !== 'LoggedIn') {
+          throw new UnauthorizedException('User is logged out.');
+        }
+
+        if (
+          !systemUser.sessionId ||
+          !decode.sessionId ||
+          systemUser.sessionId !== decode.sessionId
+        ) {
+          throw new UnauthorizedException(
+            'Session is no longer valid. Please log in again.',
+          );
+        }
+
+        (request as any).systemId = decode.systemId;
+        (request as any).sessionId = decode.sessionId;
+      }
+      if (decode.userId) {
+        (request as any).userId = decode.userId;
+      }
+      (request as any).orgId = decode.orgId;
+      (request as any).role = decode.role;
+      if (!decode.systemId && !decode.userId) {
+        throw new UnauthorizedException('Invalid token payload!');
+      }
       return true;
     } catch (error) {
       if (error instanceof TokenExpiredError) {
