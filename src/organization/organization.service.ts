@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -9,6 +10,8 @@ import { CreateOrganizationDto } from 'src/dto/create-organization.dto';
 import { EditOrganizationDto } from 'src/dto/edit-organization.dto';
 import { CloudinaryService } from 'src/media/cloudinary.service';
 import { MailService } from 'src/service/mail/mail.service';
+import { encrypt, decrypt } from '../utils/encryption.util';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class OrganizationService {
@@ -16,6 +19,7 @@ export class OrganizationService {
     private readonly databaseService: DatabaseService,
     private readonly mailService: MailService,
     private readonly cloudinary: CloudinaryService,
+    private config: ConfigService,
   ) {}
 
   async createOrganization(
@@ -38,6 +42,7 @@ export class OrganizationService {
       contactPerson,
       gst,
       accountLimit,
+      settingCode,
     } = createOrganizationDto;
     const normalizedEmail = email.toLowerCase().trim();
     const organizationExists =
@@ -59,6 +64,13 @@ export class OrganizationService {
       }
     }
 
+    const encryptionKey = this.config.get<string>('encryption.key');
+    if (!encryptionKey) {
+      throw new Error('Encryption key is not set in environment variables');
+    }
+
+    const settingCodeEncrypted = encrypt(settingCode, encryptionKey);
+
     const organization = await this.databaseService.organization.create({
       data: {
         name,
@@ -69,6 +81,7 @@ export class OrganizationService {
         gst: gst || null,
         logo: logoUrl,
         accountLimit,
+        settingCodeEncrypted,
       },
     });
 
@@ -82,51 +95,49 @@ export class OrganizationService {
   }
 
   async editOrganizationDetails(
-    orgId,
-    role,
+    orgId: string,
+    role: string,
     editOrganizationDto: EditOrganizationDto,
-    userId,
+    userId: string,
     logo?: Express.Multer.File,
   ) {
     let logoUrl: string | null = null;
     const allowedRoles = ['Root', 'SuperAdmin'];
+
     if (!allowedRoles.includes(role)) {
       throw new UnauthorizedException(
         'Only root and superadmin are allowed to edit organization details.',
       );
     }
+
     const targetOrgId = orgId;
     if (!targetOrgId) {
       throw new BadRequestException('Organization ID is required.');
     }
 
     const orgExists = await this.databaseService.organization.findUnique({
-      where: {
-        id: targetOrgId,
-      },
+      where: { id: targetOrgId },
     });
 
     if (!orgExists) {
-      throw new NotFoundException("Organization doesn't exists.");
+      throw new NotFoundException("Organization doesn't exist.");
     }
 
     if (role === 'SuperAdmin') {
       const superAdminExist =
         await this.databaseService.userCredential.findUnique({
-          where: {
-            id: userId,
-          },
+          where: { id: userId },
         });
 
       if (!superAdminExist) {
         throw new BadRequestException(
-          'Invalid request. SuperAdmin does not exists.',
+          'Invalid request. SuperAdmin does not exist.',
         );
       }
-      // If superadmin belongs to the perticular organization
+
       if (superAdminExist.orgId !== orgExists.id) {
         throw new UnauthorizedException(
-          'Unauthorized updated attempt. SuperAdmin belongs to different organization.',
+          'Unauthorized update attempt. SuperAdmin belongs to a different organization.',
         );
       }
 
@@ -136,12 +147,11 @@ export class OrganizationService {
       }
     }
 
-    if (editOrganizationDto.accountLimit) {
+    // Only validate accountLimit if it was actually provided
+    if (typeof editOrganizationDto.accountLimit === 'number') {
       const systemAccountCount =
         await this.databaseService.systemCredential.count({
-          where: {
-            orgId,
-          },
+          where: { orgId },
         });
 
       if (systemAccountCount > editOrganizationDto.accountLimit) {
@@ -151,6 +161,7 @@ export class OrganizationService {
       }
     }
 
+    // Upload logo only if provided
     if (logo) {
       try {
         const uploaded = await this.cloudinary.uploadImage(logo, 'acs');
@@ -160,16 +171,38 @@ export class OrganizationService {
       }
     }
 
+    const encryptionKey = this.config.get<string>('ENCRYPTION_KEY'); // or whatever key name you use
+    if (!encryptionKey) {
+      throw new InternalServerErrorException(
+        'ENCRYPTION_KEY is not set in environment variables',
+      );
+    }
+
+    // Build update data safely: exclude settingCode from DTO spread
+    const { settingCode, ...restDto } = editOrganizationDto;
+
+    const updateData: any = {
+      ...restDto,
+    };
+
+    // Only update settingCodeEncrypted if a new code was provided
+    if (typeof settingCode === 'string' && settingCode.trim() !== '') {
+      updateData.settingCodeEncrypted = encrypt(settingCode, encryptionKey);
+    }
+
+    // Only update logo if new logo was uploaded
+    if (logoUrl) {
+      updateData.logo = logoUrl;
+    }
+
     await this.databaseService.organization.update({
-      where: {
-        id: targetOrgId,
-      },
-      data: { ...editOrganizationDto, logo: logoUrl },
+      where: { id: targetOrgId },
+      data: updateData,
     });
 
     return {
       success: true,
-      message: 'Organizationd details have been upated successfully.',
+      message: 'Organization details have been updated successfully.',
     };
   }
 
@@ -199,9 +232,10 @@ export class OrganizationService {
     const allowedRoles = ['Root', 'SuperAdmin', 'Admin', 'System'];
     if (!allowedRoles.includes(role)) {
       throw new UnauthorizedException(
-        'Only Root and superadmin can access details of the organization.',
+        'Only Root, SuperAdmin, Admin and System can access details of the organization.',
       );
     }
+
     const organizationExist =
       await this.databaseService.organization.findUnique({
         where: {
@@ -210,13 +244,31 @@ export class OrganizationService {
       });
 
     if (!organizationExist) {
-      throw new NotFoundException("Organization doesn't exists.");
+      throw new NotFoundException("Organization doesn't exist.");
     }
+
+    let settingCode: string | null = null;
+
+    // Only try to decrypt if it actually exists
+    if (organizationExist.settingCodeEncrypted) {
+      const encryptionKey = this.config.get<string>('ENCRYPTION_KEY'); // or your actual key
+      if (!encryptionKey) {
+        throw new Error('ENCRYPTION_KEY is not set in environment variables');
+      }
+
+      settingCode = decrypt(
+        organizationExist.settingCodeEncrypted,
+        encryptionKey,
+      );
+    }
+
+    // Avoid sending encrypted value back to client
+    const { settingCodeEncrypted, ...safeOrg } = organizationExist;
 
     return {
       success: true,
       message: 'Organization details fetched successfully.',
-      organizationDetails: organizationExist,
+      organizationDetails: { ...safeOrg, settingCode },
     };
   }
 
@@ -270,6 +322,56 @@ export class OrganizationService {
     return {
       success: true,
       accountLimit: organizationExists.accountLimit,
+    };
+  }
+
+  async getSettingsCode(orgId, role, userId) {
+    const allowedRoles = ['SuperAdmin'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException('Invalid role.');
+    }
+
+    const userExists = await this.databaseService.userCredential.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (!userExists) {
+      throw new NotFoundException("Users doesn't exists.");
+    }
+
+    if (userExists.orgId !== orgId) {
+      throw new UnauthorizedException('Invalid update attempt.');
+    }
+
+    const organizationExist =
+      await this.databaseService.organization.findUnique({
+        where: {
+          id: orgId,
+        },
+      });
+
+    let settingCode;
+
+    if (organizationExist?.settingCodeEncrypted) {
+      const encryptionKey = this.config.get<string>('ENCRYPTION_KEY'); // or whatever key name you use
+      if (!encryptionKey) {
+        throw new InternalServerErrorException(
+          'ENCRYPTION_KEY is not set in environment variables',
+        );
+      }
+      settingCode = decrypt(
+        organizationExist?.settingCodeEncrypted,
+        encryptionKey,
+      );
+    } else {
+      settingCode = null;
+    }
+
+    return {
+      success: true,
+      settingCode,
     };
   }
 }

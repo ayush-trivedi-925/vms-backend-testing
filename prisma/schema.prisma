@@ -18,6 +18,7 @@ model Organization {
   contactPerson String
   gst String?
   accountLimit  Int @default(5)
+  settingCodeEncrypted String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   visits Visit[]

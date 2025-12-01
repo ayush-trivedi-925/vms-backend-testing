@@ -79,6 +79,23 @@ export class SystemController {
   }
 
   @UseGuards(AuthGuard)
+  @Post('verify-settingsCode')
+  async verifySettingsCode(
+    @Req() req,
+    @Body()
+    data: {
+      secretCode: string;
+    },
+  ) {
+    return this.systemService.verifySettingsCode(
+      req.orgId,
+      req.role,
+      req.systemId,
+      data.secretCode,
+    );
+  }
+
+  @UseGuards(AuthGuard)
   @Get(':systemId')
   async fetchSystemDetails(@Req() req, @Param('systemId') systemId: string) {
     return this.systemService.fetchSystemDetails(req.orgId, req.role, systemId);

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -11,7 +12,9 @@ import * as bcrypt from 'bcrypt';
 import { MailService } from 'src/service/mail/mail.service';
 import { ResetPasswordDto } from 'src/dto/reset-password.dto';
 import { EditSystemUserDto } from 'src/dto/edit-system-user.dto';
+import { decrypt } from 'src/utils/encryption.util';
 const otpGenerator = require('otp-generator');
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class SystemService {
@@ -19,6 +22,7 @@ export class SystemService {
     private readonly databaseService: DatabaseService,
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
+    private readonly config: ConfigService,
   ) {}
   async registerSystemUser(
     orgId,
@@ -670,5 +674,64 @@ export class SystemService {
       success: true,
       message: 'All logged in accounts have been logged out.',
     };
+  }
+
+  async verifySettingsCode(
+    orgId: string,
+    role: string,
+    systemId: string,
+    secretCode: string,
+  ) {
+    // Role check
+    if (role !== 'System') {
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    // Check system exists
+    const system = await this.databaseService.systemCredential.findUnique({
+      where: { id: systemId },
+    });
+
+    if (!system) {
+      throw new NotFoundException('Invalid system ID');
+    }
+
+    const organizationExist =
+      await this.databaseService.organization.findUnique({
+        where: {
+          id: orgId,
+        },
+      });
+
+    if (!organizationExist) {
+      throw new BadRequestException('Invalid organization.');
+    }
+
+    // Organization match check
+    if (system.orgId !== orgId) {
+      throw new BadRequestException('Unauthorized');
+    }
+    let settingsCode;
+
+    if (organizationExist?.settingCodeEncrypted) {
+      const encryptionKey = this.config.get<string>('ENCRYPTION_KEY'); // or whatever key name you use
+      if (!encryptionKey) {
+        throw new InternalServerErrorException(
+          'ENCRYPTION_KEY is not set in environment variables',
+        );
+      }
+      settingsCode = decrypt(
+        organizationExist?.settingCodeEncrypted,
+        encryptionKey,
+      );
+    } else {
+      settingsCode = null;
+    }
+
+    if (secretCode !== settingsCode) {
+      throw new BadRequestException('Secret code mismatch.');
+    }
+
+    return { success: true };
   }
 }

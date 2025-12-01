@@ -36,6 +36,15 @@ export class OrganizationController {
     );
   }
 
+  @Get('settingCode')
+  async getSettingCode(@Req() req) {
+    return this.organizationService.getSettingsCode(
+      req.orgId,
+      req.role,
+      req.userId,
+    );
+  }
+
   @Get('accountlimit')
   async getOrganizationAccountLimit(@Req() req) {
     return this.organizationService.getSystemAccountLimit(req.orgId, req.role);

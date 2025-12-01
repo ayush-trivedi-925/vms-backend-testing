@@ -13,4 +13,7 @@ export default () => ({
     key: process.env.CLOUDINARY_API_KEY,
     secret: process.env.CLOUDINARY_API_SECRET,
   },
+  encryption: {
+    key: process.env.ENCRYPTION_KEY,
+  },
 });

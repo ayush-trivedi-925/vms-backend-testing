@@ -6,6 +6,9 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Length,
+  Matches,
+  Max,
   Min,
 } from 'class-validator';
 
@@ -33,6 +36,11 @@ export class CreateOrganizationDto {
   @IsString()
   @IsOptional()
   gst: string;
+
+  @IsString()
+  @Length(4, 4, { message: 'settingCode must be exactly 4 digits' })
+  @Matches(/^[0-9]+$/, { message: 'settingCode must contain only numbers' })
+  settingCode: string;
 
   @Type(() => Number)
   @IsInt()
