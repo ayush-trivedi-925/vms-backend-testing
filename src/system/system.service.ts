@@ -398,7 +398,9 @@ export class SystemService {
   async deleteSystemAccount(systemId, orgId, userId, role) {
     const allowedRoles = ['SuperAdmin'];
     if (!allowedRoles.includes(role)) {
-      throw new BadRequestException('Only superadmin can add system accounts.');
+      throw new BadRequestException(
+        'Only superadmin can delete system accounts.',
+      );
     }
     const organizationExists =
       await this.databaseService.organization.findUnique({
@@ -605,6 +607,68 @@ export class SystemService {
     return {
       success: true,
       message: 'Logout successfull.',
+    };
+  }
+
+  async logoutSystemAccountWeb(systemId, orgId, userId, role) {
+    const allowedRoles = ['SuperAdmin'];
+    if (!allowedRoles.includes(role)) {
+      throw new BadRequestException(
+        'Only superadmin can logout system account.',
+      );
+    }
+    const organizationExists =
+      await this.databaseService.organization.findUnique({
+        where: {
+          id: orgId,
+        },
+      });
+
+    if (!organizationExists) {
+      throw new BadRequestException("Organization doesn't exists.");
+    }
+
+    const userExists = await this.databaseService.userCredential.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+    if (!userExists) {
+      throw new BadRequestException("User doesn't exists.");
+    }
+
+    if (userExists.orgId !== orgId) {
+      throw new BadRequestException('Invalid credentials.');
+    }
+
+    const sytemAccountExists =
+      await this.databaseService.systemCredential.findUnique({
+        where: {
+          id: systemId,
+        },
+      });
+
+    if (!sytemAccountExists) {
+      throw new NotFoundException('System account does not exists.');
+    }
+
+    if (sytemAccountExists.activityStatus === 'LoggedOut') {
+      throw new BadRequestException('Account is already logged out.');
+    }
+
+    await this.databaseService.systemCredential.update({
+      where: {
+        id: systemId,
+      },
+      data: {
+        activityStatus: 'LoggedOut',
+        sessionId: null,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'System account logged out successfully.',
     };
   }
 

@@ -132,6 +132,7 @@ export class VisitService {
       success: true,
       message: `${fullName} has checked in at ${startVisitDetails.startTime}`,
       startVisitDetails: {
+        id: startVisitDetails.id,
         visitorId: startVisitDetails.id,
         fullName,
         email: normalizedEmail,
@@ -141,7 +142,7 @@ export class VisitService {
           department: startVisitDetails.staff.departmentId,
           designation: startVisitDetails.staff.designation,
         },
-        reasonOfVist: {
+        reasonOfVisit: {
           name: startVisitDetails.reasonOfVisit?.name,
         },
         checkInTime: startVisitDetails.startTime,

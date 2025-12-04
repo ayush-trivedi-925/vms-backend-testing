@@ -129,6 +129,30 @@ export class SystemController {
   }
 
   @UseGuards(AuthGuard)
+  @Post('logoutall')
+  async logoutAllSystemAccounts(@Req() req) {
+    return this.systemService.logoutAllSystemAccounts(
+      req.orgId,
+      req.role,
+      req.userId,
+    );
+  }
+
+  @UseGuards(AuthGuard)
+  @Post('/logout/:systemId')
+  async logoutSystemAccountWeb(
+    @Req() req,
+    @Param('systemId') systemId: string,
+  ) {
+    return this.systemService.logoutSystemAccountWeb(
+      systemId,
+      req.orgId,
+      req.userId,
+      req.role,
+    );
+  }
+
+  @UseGuards(AuthGuard)
   @Put(':systemId')
   async updateSystemDetails(
     @Req() req,
@@ -140,16 +164,6 @@ export class SystemController {
       req.role,
       systemId,
       editSystemUserDto,
-    );
-  }
-
-  @UseGuards(AuthGuard)
-  @Post('logoutall')
-  async logoutAllSystemAccounts(@Req() req) {
-    return this.systemService.logoutAllSystemAccounts(
-      req.orgId,
-      req.role,
-      req.userId,
     );
   }
 }
