@@ -155,7 +155,6 @@ export class VisitService {
     endVisitDto: EndVisitDto,
     systemId?: string,
     role?: string,
-    checkOutPicture?: Express.Multer.File,
   ) {
     const allowedRoles = ['SuperAdmin', 'Admin', 'System'];
     let imageUrl: string | null = null;
@@ -202,25 +201,11 @@ export class VisitService {
       throw new BadRequestException('You are not allowed to end this visit.');
     }
 
-    if (checkOutPicture) {
-      try {
-        const uploaded = await this.cloudinary.uploadImage(
-          checkOutPicture,
-          'acs',
-        );
-        imageUrl = uploaded['secure_url'];
-        console.log(imageUrl);
-      } catch (error) {
-        throw new BadRequestException('Image upload failed');
-      }
-    }
-
     const updatedVisitStatus = await this.databaseService.visit.update({
       where: { id: visitExists.id },
       data: {
         status: 'COMPLETED',
         endTime: new Date(),
-        checkOutPicture: imageUrl ?? null,
       },
       include: {
         staff: {
@@ -297,7 +282,6 @@ export class VisitService {
           'acs',
         );
         imageUrl = uploaded['secure_url'];
-        console.log(imageUrl);
       } catch (error) {
         throw new BadRequestException('Image upload failed');
       }
@@ -308,7 +292,6 @@ export class VisitService {
       data: {
         status: 'COMPLETED',
         endTime: new Date(),
-        checkOutPicture: imageUrl ?? null,
       },
       include: {
         staff: {

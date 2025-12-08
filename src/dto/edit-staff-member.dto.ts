@@ -1,5 +1,5 @@
 import { IsEmail, IsOptional, IsString, IsEnum } from 'class-validator';
-import { AccountStatusEnum, MemberRoleEnum } from 'generated/prisma';
+import { AccountStatusEnum, MemberRoleEnum } from '@prisma/client';
 
 export class EditStaffMemberDto {
   @IsOptional()

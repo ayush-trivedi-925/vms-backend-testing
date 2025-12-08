@@ -32,8 +32,7 @@ export class StaffService {
     qOrgId?: string,
   ) {
     const { name, email, designation, departmentId } = addStaffMemberDto;
-    console.log(qOrgId);
-    console.log(orgId);
+
     // Decide which orgId to use
     const targetOrgId = role === 'Root' && qOrgId ? qOrgId : orgId;
 
@@ -71,15 +70,26 @@ export class StaffService {
       throw new BadRequestException('Member already exist.');
     }
 
-    const staffMember = await this.databaseService.staff.create({
-      data: {
-        orgId: targetOrgId,
-        name,
-        email: normalizedEmail,
-        departmentId,
-        designation,
-      },
+    const staffMember = await this.databaseService.$transaction(async (tx) => {
+      // count only staff in this org (recommended)
+      const count = await tx.staff.count({
+        where: { orgId: targetOrgId },
+      });
+
+      const employeeCode = `EMP${String(count + 1).padStart(5, '0')}`; // EMP00001, EMP00002...
+
+      return tx.staff.create({
+        data: {
+          orgId: targetOrgId,
+          name,
+          email: normalizedEmail,
+          departmentId,
+          designation,
+          employeeCode,
+        },
+      });
     });
+
     return {
       success: true,
       message: `${name} has been added successfully.`,
@@ -291,8 +301,6 @@ export class StaffService {
     }
     // Decide which orgId to use
     const targetOrgId = orgId;
-
-    console.log(userId);
 
     if (!targetOrgId) {
       throw new BadRequestException('Organization ID is required.');

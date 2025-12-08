@@ -43,19 +43,13 @@ export class VisitController {
     );
   }
 
-  @UseInterceptors(FileInterceptor('checkOutPicture', multerConfig))
   @Post('check-out')
-  async endVisit(
-    @Req() req,
-    @Body() endVisitDto: EndVisitDto,
-    @UploadedFile() checkOutPicture?: Express.Multer.File,
-  ) {
+  async endVisit(@Req() req, @Body() endVisitDto: EndVisitDto) {
     return this.visitService.endVisit(
       req.orgId,
       endVisitDto,
       req.systemId ?? null,
       req.role ?? null,
-      checkOutPicture ?? undefined,
     );
   }
 

@@ -53,7 +53,6 @@ export class StaffController {
 
   @Get('superadmin')
   async getSuperAdminDetails(@Req() req, @Query('qOrgId') qOrgId?: string) {
-    console.log(req.orgId, req.role, req.userId);
     return this.staffService.getSuperAdminDetails(
       req.orgId,
       req.role,
