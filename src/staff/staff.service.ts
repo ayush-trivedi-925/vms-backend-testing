@@ -25,6 +25,22 @@ export class StaffService {
     return `${prefix}${randomDigits}`;
   }
 
+  private async generateUniqueEmployeeCode(
+    tx: any,
+    orgId: string,
+  ): Promise<string> {
+    while (true) {
+      const random = Math.floor(1000 + Math.random() * 9000);
+      const employeeCode = `EMP${random}`;
+
+      const exists = await tx.staff.findFirst({
+        where: { employeeCode, orgId },
+      });
+
+      if (!exists) return employeeCode;
+    }
+  }
+
   async addStaffMember(
     orgId: string | null,
     role: string,
@@ -71,12 +87,10 @@ export class StaffService {
     }
 
     const staffMember = await this.databaseService.$transaction(async (tx) => {
-      // count only staff in this org (recommended)
-      const count = await tx.staff.count({
-        where: { orgId: targetOrgId },
-      });
-
-      const employeeCode = `EMP${String(count + 1).padStart(5, '0')}`; // EMP00001, EMP00002...
+      const employeeCode = await this.generateUniqueEmployeeCode(
+        tx,
+        targetOrgId,
+      );
 
       return tx.staff.create({
         data: {
