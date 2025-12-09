@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
- 
 }
 
 datasource db {
@@ -27,8 +26,8 @@ model Organization {
   systemCredentials SystemCredential[]
   departments Department[]
   reasonOfVisits  ReasonOfVisit[]
-  //  attendanceSessions AttendanceSession[]
-  // attendanceEvents AttendanceEvent[]
+   attendanceSessions AttendanceSession[]
+  attendanceEvents AttendanceEvent[]
 
 }
 
@@ -70,77 +69,72 @@ model Staff {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   visits Visit[]
-  // attendanceSessions AttendanceSession[]
-  // attendanceEvents AttendanceEvent[]
+  attendanceSessions AttendanceSession[]
+  attendanceEvents AttendanceEvent[]
 }
 
-// model AttendanceSession {
-//   id       String   @id @default(uuid())
-//   orgId    String
-//   staffId  String
+model AttendanceSession {
+  id       String   @id @default(uuid())
+  orgId    String
+  staffId  String
+  //usually startOfDay of first punch-in
+  date     DateTime
+  status       AttendanceSessionStatus @default(OPEN)
+  closureType  AttendanceClosureType?
+  isLateClosure          Boolean   @default(false)
+  latePunchOutReason     String?
+  latePunchOutRecordedAt DateTime?
+  firstPunchInAt   DateTime?
+  lastPunchOutAt   DateTime?
+  totalWorkSeconds  Int @default(0)
+  totalBreakSeconds Int @default(0)
+  events   AttendanceEvent[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  staff        Staff        @relation(fields: [staffId], references: [id], onDelete: Cascade)
+}
 
-//   // usually startOfDay of first punch-in
-//   date     DateTime
-//   status       AttendanceSessionStatus @default(OPEN)
-//   closureType  AttendanceClosureType?
-//   isLateClosure          Boolean   @default(false)
-//   latePunchOutReason     String?
-//   latePunchOutRecordedAt DateTime?
-//   firstPunchInAt   DateTime?
-//   lastPunchOutAt   DateTime?
-//   totalWorkSeconds  Int @default(0)
-//   totalBreakSeconds Int @default(0)
-//   events   AttendanceEvent[]
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
-//   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-//   staff        Staff        @relation(fields: [staffId], references: [id], onDelete: Cascade)
-// }
+model AttendanceEvent {
+  id      String  @id @default(uuid())
+  orgId   String
+  staffId String
+  sessionId String?
+  eventType AttendanceEventType
+  source    AttendanceEventSource @default(QR)
+  timestamp DateTime @default(now())
+  // for corrections / late punches
+  isCorrection   Boolean @default(false)
+  correctionNote String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  staff        Staff        @relation(fields: [staffId], references: [id], onDelete: Restrict)
+  session      AttendanceSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+}
 
-// model AttendanceEvent {
-//   id      String  @id @default(uuid())
-//   orgId   String
-//   staffId String
-//   sessionId String?
+enum AttendanceEventType {
+  PUNCH_IN
+  PUNCH_OUT
+  BREAK_START
+  BREAK_END
+  LATE_PUNCH_OUT
+}
 
- 
+enum AttendanceSessionStatus {
+  OPEN
+  CLOSED
+}
 
-//   eventType AttendanceEventType
-//   source    AttendanceEventSource @default(QR)
-//   timestamp DateTime @default(now())
-//   // for corrections / late punches
-//   isCorrection   Boolean @default(false)
-//   correctionNote String?
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
-//   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-//   staff        Staff        @relation(fields: [staffId], references: [id], onDelete: Restrict)
-//   session      AttendanceSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
-// }
+enum AttendanceClosureType {
+  NORMAL
+  LATE
+}
 
-// enum AttendanceEventType {
-//   PUNCH_IN
-//   PUNCH_OUT
-//   BREAK_START
-//   BREAK_END
-//   LATE_PUNCH_OUT
-// }
-
-// enum AttendanceSessionStatus {
-//   OPEN
-//   CLOSED
-// }
-
-// enum AttendanceClosureType {
-//   NORMAL
-//   LATE
-// }
-
-// enum AttendanceEventSource {
-//   QR
-//   EMPLOYEE_ID
-//   ADMIN_PANEL
-// }
+enum AttendanceEventSource {
+  QR
+  EMPLOYEE_ID
+}
 
 
 model RefreshToken {
