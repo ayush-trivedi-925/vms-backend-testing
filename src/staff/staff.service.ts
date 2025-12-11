@@ -1,5 +1,4 @@
 import {
-  BadGatewayException,
   BadRequestException,
   Injectable,
   NotFoundException,
@@ -29,9 +28,22 @@ export class StaffService {
     tx: any,
     orgId: string,
   ): Promise<string> {
+    // Fetch org once (instead of on every loop)
+    const org = await this.databaseService.organization.findUnique({
+      where: { id: orgId },
+      select: { name: true },
+    });
+
+    if (!org) {
+      throw new Error(`Organization not found: ${orgId}`);
+    }
+
+    // Normalize prefix: take first 3 letters, uppercase, remove spaces
+    const prefix = org.name.replace(/\s+/g, '').substring(0, 3).toUpperCase();
+
     while (true) {
-      const random = Math.floor(1000 + Math.random() * 9000);
-      const employeeCode = `EMP${random}`;
+      const random = Math.floor(1000 + Math.random() * 9000); // 4-digit random number
+      const employeeCode = `${prefix}${random}`;
 
       const exists = await tx.staff.findFirst({
         where: { employeeCode, orgId },
@@ -101,9 +113,28 @@ export class StaffService {
           designation,
           employeeCode,
         },
+        include: {
+          department: true,
+        },
       });
     });
 
+    // try {
+    //   await this.mailService.StaffRegistration(
+    //     {
+    //       name: staffMember.name,
+    //       email: staffMember.email,
+    //       employeeCode: staffMember.employeeCode,
+    //       designation: staffMember.designation,
+    //       department: staffMember.department?.name ?? 'N/A',
+    //     },
+    //     organizationExists,
+    //   );
+    // } catch (mailErr) {
+    //   // Log the mail error, but don't fail the entire operation.
+    //   // Replace console.error with your logger.
+    //   console.error('Failed to send staff registration email', mailErr);
+    // }
     return {
       success: true,
       message: `${name} has been added successfully.`,
@@ -137,61 +168,68 @@ export class StaffService {
     if (!organizationExists) {
       throw new NotFoundException("Organization doesn't exist.");
     }
+
     const results: any = [];
-    for (const staffDto of staffList) {
-      const { name, email, designation } = staffDto;
-      const normalizedEmail = email.toLowerCase().trim();
-      const departmentName = staffDto.departmentId; // 👈 from CSV
 
-      const staffMemberExists = await this.databaseService.staff.findFirst({
-        where: { email: normalizedEmail },
-      });
+    // Start transaction to ensure code uniqueness
+    await this.databaseService.$transaction(async (tx) => {
+      for (const staffDto of staffList) {
+        const { name, email, designation } = staffDto;
+        const normalizedEmail = email.toLowerCase().trim();
+        const departmentName = staffDto.departmentId;
 
-      if (staffMemberExists) {
-        results.push({
-          success: false,
-          message: `${name} already exists.`,
-          email,
+        const staffMemberExists = await tx.staff.findFirst({
+          where: { email: normalizedEmail },
         });
-        continue;
-      }
-      const department = await this.databaseService.department.findFirst({
-        where: { name: departmentName, orgId: targetOrgId },
-      });
 
-      if (!department) {
-        results.push({
-          success: false,
-          message: `Department ${departmentName} not found.`,
-          email: staffDto.email,
+        if (staffMemberExists) {
+          results.push({
+            success: false,
+            message: `${name} already exists.`,
+            email,
+          });
+          continue;
+        }
+
+        const department = await tx.department.findFirst({
+          where: { name: departmentName, orgId: targetOrgId },
         });
-        continue;
-      }
 
-      if (department?.orgId !== targetOrgId) {
-        results.push({
-          success: false,
-          message: `Department ${departmentName} not found.`,
-          email: staffDto.email,
+        if (!department || department.orgId !== targetOrgId) {
+          results.push({
+            success: false,
+            message: `Department ${departmentName} not found.`,
+            email: staffDto.email,
+          });
+          continue;
+        }
+
+        // Generate unique employee code
+        const employeeCode = await this.generateUniqueEmployeeCode(
+          tx,
+          targetOrgId,
+        );
+
+        // Create staff with generated employee code
+        const staffMember = await tx.staff.create({
+          data: {
+            orgId: targetOrgId,
+            name,
+            email: normalizedEmail,
+            designation,
+            departmentId: department.id,
+            employeeCode,
+          },
         });
-        continue;
-      }
 
-      const staffMember = await this.databaseService.staff.create({
-        data: {
-          orgId: targetOrgId,
-          name,
-          email: normalizedEmail,
-          designation,
-          departmentId: department.id,
-        },
-      });
-      results.push({
-        success: true,
-        message: `${name} has been added successfully.`,
-        staffMemberDetails: staffMember,
-      });
-    }
+        results.push({
+          success: true,
+          message: `${name} has been added successfully.`,
+          staffMemberDetails: staffMember,
+        });
+      }
+    });
+
     return {
       success: true,
       imported: results.filter((r) => r.success).length,
@@ -259,7 +297,7 @@ export class StaffService {
     userId: string,
     qOrgId?: string,
   ) {
-    const allowedRoles = ['Root', 'SuperAdmin', 'Admin'];
+    const allowedRoles = ['Root', 'SuperAdmin', 'Admin', 'System'];
     if (!allowedRoles.includes(role)) {
       throw new UnauthorizedException(
         'Only root, superadmin, and admin can access the staff members of an organization.',
@@ -292,7 +330,7 @@ export class StaffService {
       throw new NotFoundException("Staff member doesn't exist.");
     }
     if (staffExists.orgId !== targetOrgId) {
-      throw new UnauthorizedException(
+      throw new BadRequestException(
         'This staff member does not belong to the specified organization.',
       );
     }

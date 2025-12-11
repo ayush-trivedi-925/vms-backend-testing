@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
 
@@ -27,7 +28,17 @@ export class AttendanceService {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate());
   }
 
-  private async getStaffByEmployeeCode(employeeCode: string) {
+  private async getStaffByEmployeeCode(employeeCode: string, orgId: string) {
+    const orgExists = await this.databaseService.organization.findUnique({
+      where: {
+        id: orgId,
+      },
+    });
+
+    if (!orgExists) {
+      throw new NotFoundException('Invalid org id.');
+    }
+
     const staff = await this.databaseService.staff.findUnique({
       where: { employeeCode },
     });
@@ -38,6 +49,12 @@ export class AttendanceService {
 
     if (!staff.badgeActive) {
       throw new BadRequestException('This badge is deactivated.');
+    }
+
+    if (orgExists.id !== staff.orgId) {
+      throw new BadRequestException(
+        'Employee belongs to different organization.',
+      );
     }
 
     return staff;
@@ -167,9 +184,40 @@ export class AttendanceService {
 
   // ========== SCAN ==========
 
-  async scan(dto: ScanAttendanceDto) {
+  async scan(orgId, systemId, role, dto: ScanAttendanceDto) {
+    const allowedRoles = ['System'];
+    if (!allowedRoles.includes(role)) {
+      throw new BadRequestException(
+        'Invalid role, only System can do this action.',
+      );
+    }
+
+    const orgExists = await this.databaseService.organization.findUnique({
+      where: {
+        id: orgId,
+      },
+    });
+
+    if (!orgExists) {
+      throw new NotFoundException('Invalid organization id.');
+    }
+
+    const systemExists = await this.databaseService.systemCredential.findUnique(
+      {
+        where: {
+          id: systemId,
+        },
+      },
+    );
+
+    if (!systemExists || systemExists.orgId !== orgId) {
+      throw new BadRequestException(
+        'Invalid credentials, system account belongs to different organization.',
+      );
+    }
+
     const { employeeCode, scanTime } = dto;
-    const staff = await this.getStaffByEmployeeCode(employeeCode);
+    const staff = await this.getStaffByEmployeeCode(employeeCode, orgId);
     const now = new Date(scanTime);
 
     const { state, session } = await this.getStateForScan(staff.id, now);
@@ -218,9 +266,40 @@ export class AttendanceService {
 
   // ========== ACTIONS ==========
 
-  async action(dto: AttendanceActionDto) {
+  async action(orgId, systemId, role, dto: AttendanceActionDto) {
+    const allowedRoles = ['System'];
+    if (!allowedRoles.includes(role)) {
+      throw new BadRequestException(
+        'Invalid role, only System can do this action.',
+      );
+    }
+
+    const orgExists = await this.databaseService.organization.findUnique({
+      where: {
+        id: orgId,
+      },
+    });
+
+    if (!orgExists) {
+      throw new NotFoundException('Invalid organization id.');
+    }
+
+    const systemExists = await this.databaseService.systemCredential.findUnique(
+      {
+        where: {
+          id: systemId,
+        },
+      },
+    );
+
+    if (!systemExists || systemExists.orgId !== orgId) {
+      throw new BadRequestException(
+        'Invalid credentials, system account belongs to different organization.',
+      );
+    }
+
     const { employeeCode, action } = dto;
-    const staff = await this.getStaffByEmployeeCode(employeeCode);
+    const staff = await this.getStaffByEmployeeCode(employeeCode, orgId);
 
     switch (action) {
       case 'PUNCH_IN':

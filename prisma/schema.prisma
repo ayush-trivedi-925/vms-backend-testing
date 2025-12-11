@@ -41,7 +41,7 @@ model Visit {
   reasonId  String?
   reasonOfVisit ReasonOfVisit? @relation(fields: [reasonId], references: [id])
   staffId String
-  staff Staff @relation(fields: [staffId], references: [id], onDelete: Restrict)
+  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
   startTime DateTime @default(now())
   endTime DateTime?
   status  MeetingStatus @default(ONGOING)
@@ -109,7 +109,7 @@ model AttendanceEvent {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  staff        Staff        @relation(fields: [staffId], references: [id], onDelete: Restrict)
+  staff        Staff        @relation(fields: [staffId], references: [id], onDelete: Cascade)
   session      AttendanceSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
 }
 
