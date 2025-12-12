@@ -190,9 +190,10 @@ export class StaffService {
       throw new NotFoundException("Organization doesn't exist.");
     }
 
-    const results: any = [];
+    const results: any[] = [];
+    const createdStaffForMail: any[] = []; // collect created staff to email later
 
-    // Start transaction to ensure code uniqueness
+    // DB transaction: create staff records (fast)
     await this.databaseService.$transaction(async (tx) => {
       for (const staffDto of staffList) {
         const { name, email, designation } = staffDto;
@@ -225,7 +226,7 @@ export class StaffService {
           continue;
         }
 
-        // Generate unique employee code
+        // Generate unique employee code using tx helper
         const employeeCode = await this.generateUniqueEmployeeCode(
           tx,
           targetOrgId,
@@ -241,6 +242,7 @@ export class StaffService {
             departmentId: department.id,
             employeeCode,
           },
+          include: { department: true }, // include so we know department name
         });
 
         results.push({
@@ -248,14 +250,73 @@ export class StaffService {
           message: `${name} has been added successfully.`,
           staffMemberDetails: staffMember,
         });
+
+        // Collect minimal info for sending email after transaction
+        createdStaffForMail.push({
+          id: staffMember.id,
+          name: staffMember.name,
+          email: staffMember.email,
+          employeeCode: staffMember.employeeCode,
+          designation: staffMember.designation,
+          departmentName: staffMember.department?.name ?? 'N/A',
+        });
       }
+    }); // end transaction
+
+    // Fire-and-forget QR generation + email sends (do NOT await)
+    // Each item runs in its own async IIFE; errors are caught and logged.
+    createdStaffForMail.forEach((s) => {
+      (async () => {
+        try {
+          // build QR payload (string)
+          const qrPayload = JSON.stringify({ empId: s.employeeCode });
+
+          // generate PNG buffer (may be CPU-bound for many items)
+          let qrCodeBuffer: Buffer | null = null;
+          try {
+            qrCodeBuffer = await QRCode.toBuffer(qrPayload, {
+              type: 'png',
+              margin: 1,
+              width: 300,
+            });
+          } catch (qrErr) {
+            console.error(`Failed to generate QR for ${s.email}`, qrErr);
+            qrCodeBuffer = null;
+          }
+
+          // call mailer (await inside this IIFE so we can catch mail errors)
+          try {
+            await this.mailService.StaffRegistration(
+              {
+                name: s.name,
+                email: s.email,
+                employeeCode: s.employeeCode,
+                designation: s.designation,
+                department: s.departmentName,
+                qrCodeBuffer, // attach buffer (may be null - mailer should handle)
+              },
+              organizationExists,
+            );
+          } catch (mailErr) {
+            console.error(
+              `Failed to send registration mail to ${s.email}`,
+              mailErr,
+            );
+          }
+        } catch (err) {
+          // catch any unexpected errors per user
+          console.error(`Background job failed for ${s.email}`, err);
+        }
+      })();
     });
 
+    // Return immediately (emails are being sent in background)
     return {
       success: true,
       imported: results.filter((r) => r.success).length,
       failed: results.filter((r) => !r.success).length,
       details: results,
+      message: 'Staff created. Emails (with QR) are being sent in background.',
     };
   }
 
