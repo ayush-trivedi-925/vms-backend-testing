@@ -2,7 +2,6 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
 
@@ -28,7 +27,11 @@ export class AttendanceService {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate());
   }
 
-  private async getStaffByEmployeeCode(employeeCode: string, orgId: string) {
+  private async getStaffByEmployeeCode(
+    orgId: string,
+    employeeCode?: string,
+    email?: string,
+  ) {
     const orgExists = await this.databaseService.organization.findUnique({
       where: {
         id: orgId,
@@ -39,12 +42,20 @@ export class AttendanceService {
       throw new NotFoundException('Invalid org id.');
     }
 
-    const staff = await this.databaseService.staff.findUnique({
-      where: { employeeCode },
-    });
+    let staff;
+
+    if (employeeCode) {
+      staff = await this.databaseService.staff.findUnique({
+        where: { employeeCode },
+      });
+    } else if (email) {
+      staff = await this.databaseService.staff.findUnique({
+        where: { email },
+      });
+    }
 
     if (!staff) {
-      throw new NotFoundException('Employee not found for this code.');
+      throw new NotFoundException('No employee found for these credentials.');
     }
 
     if (!staff.badgeActive) {
@@ -216,8 +227,8 @@ export class AttendanceService {
       );
     }
 
-    const { employeeCode, scanTime } = dto;
-    const staff = await this.getStaffByEmployeeCode(employeeCode, orgId);
+    const { employeeCode, scanTime, email } = dto;
+    const staff = await this.getStaffByEmployeeCode(orgId, employeeCode, email);
     const now = new Date(scanTime);
 
     const { state, session } = await this.getStateForScan(staff.id, now);
@@ -299,7 +310,7 @@ export class AttendanceService {
     }
 
     const { employeeCode, action } = dto;
-    const staff = await this.getStaffByEmployeeCode(employeeCode, orgId);
+    const staff = await this.getStaffByEmployeeCode(orgId, employeeCode);
 
     switch (action) {
       case 'PUNCH_IN':

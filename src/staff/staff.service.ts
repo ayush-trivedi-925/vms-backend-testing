@@ -4,12 +4,21 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { AuthRoleEnum } from 'generated/prisma';
+import { AuthRoleEnum } from '@prisma/client';
 import { DatabaseService } from 'src/database/database.service';
 import { AddStaffMemberDto } from 'src/dto/add-staff-member.dto';
 import { EditStaffMemberDto } from 'src/dto/edit-staff-member.dto';
 import * as bcrypt from 'bcrypt';
 import { MailService } from 'src/service/mail/mail.service';
+
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+import * as QRCode from 'qrcode';
+
+const tz = 'Asia/Kolkata';
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 @Injectable()
 export class StaffService {
@@ -119,22 +128,34 @@ export class StaffService {
       });
     });
 
-    // try {
-    //   await this.mailService.StaffRegistration(
-    //     {
-    //       name: staffMember.name,
-    //       email: staffMember.email,
-    //       employeeCode: staffMember.employeeCode,
-    //       designation: staffMember.designation,
-    //       department: staffMember.department?.name ?? 'N/A',
-    //     },
-    //     organizationExists,
-    //   );
-    // } catch (mailErr) {
-    //   // Log the mail error, but don't fail the entire operation.
-    //   // Replace console.error with your logger.
-    //   console.error('Failed to send staff registration email', mailErr);
-    // }
+    let qrCodeBuffer: Buffer | null = null;
+    try {
+      // Generate QR code as buffer
+      qrCodeBuffer = await QRCode.toBuffer(
+        JSON.stringify({ empId: staffMember.employeeCode }),
+      );
+    } catch (err) {
+      console.error('Failed to generate QR code', err);
+      qrCodeBuffer = null;
+    }
+
+    try {
+      await this.mailService.StaffRegistration(
+        {
+          name: staffMember.name,
+          email: staffMember.email,
+          employeeCode: staffMember.employeeCode,
+          designation: staffMember.designation,
+          department: staffMember.department?.name ?? 'N/A',
+          qrCodeBuffer,
+        },
+        organizationExists,
+      );
+    } catch (mailErr) {
+      // Log the mail error, but don't fail the entire operation.
+      // Replace console.error with your logger.
+      console.error('Failed to send staff registration email', mailErr);
+    }
     return {
       success: true,
       message: `${name} has been added successfully.`,
@@ -269,13 +290,38 @@ export class StaffService {
       throw new NotFoundException("Organization doesn't exist.");
     }
 
+    const startOfToday = dayjs().tz(tz).startOf('day').toDate(); // local-day start -> Date
+    const startOfTomorrow = dayjs()
+      .tz(tz)
+      .add(1, 'day')
+      .startOf('day')
+      .toDate();
+
     const allStaffMembers = await this.databaseService.staff.findMany({
       where: { orgId: targetOrgId },
       include: {
         department: true,
+        attendanceEvents: {
+          where: {
+            timestamp: {
+              gte: startOfToday,
+              lt: startOfTomorrow,
+            },
+          },
+          orderBy: { timestamp: 'desc' },
+        },
+        attendanceSessions: {
+          where: {
+            date: {
+              gte: startOfToday,
+              lt: startOfTomorrow,
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
       },
     });
-
     if (allStaffMembers.length === 0) {
       return {
         success: true,

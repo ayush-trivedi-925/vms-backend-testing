@@ -328,40 +328,59 @@ export class MailService {
     await this.transporter.sendMail(mailOptions);
   }
 
-  // async StaffRegistration(staff: any, org: any) {
-  //   const mailOptions = {
-  //     from: `"Visitor Management System" <no-reply@segueit.com>`,
-  //     to: staff?.email,
-  //     subject: `Your Staff Account Has Been Successfully Created - ${org.name}`,
-  //     html: `
-  //     <p>Dear ${staff?.name || 'Team Member'},</p>
+  async StaffRegistration(staff: any, org: any) {
+    const mailOptions = {
+      from: `"Visitor Management System" <no-reply@segueit.com>`,
+      to: staff?.email,
+      subject: `Your Staff Account Has Been Successfully Created - ${org.name}`,
+      html: `
+      <p>Dear ${staff?.name || 'Team Member'},</p>
 
-  //     <p>We are pleased to inform you that your staff profile has been successfully created in the <b>SegueVisit Visitor Management System</b>.</p>
+      <p>We are pleased to inform you that your staff profile has been successfully created in the <b>SegueVisit Visitor Management System</b>.</p>
 
-  //     <p>Here are your registration details:</p>
+      <p>Here are your registration details:</p>
 
-  //     <ul>
-  //       <li><b>Name:</b> ${staff.name}</li>
-  //       <li><b>Email:</b> ${staff.email}</li>
-  //       <li><b>Employee ID:</b> ${staff.employeeCode}</li>
-  //       <li><b>Designation:</b> ${staff.designation}</li>
-  //       <li><b>Department:</b> ${staff.departmentName}</li>
-  //       <li><b>Organization:</b> ${org.name}</li>
-  //     </ul>
+      <ul>
+        <li><b>Name:</b> ${staff.name}</li>
+        <li><b>Email:</b> ${staff.email}</li>
+        <li><b>Employee ID:</b> ${staff.employeeCode}</li>
+        <li><b>Designation:</b> ${staff.designation}</li>
+        <li><b>Department:</b> ${staff.departmentName}</li>
+        <li><b>Organization:</b> ${org.name}</li>
+        
+      </ul>
+        ${
+          staff.qrCodeBuffer
+            ? `
+        <p>QR Code:</p>
+        <img src="cid:empQrCode" alt="Employee QR Code" width="200" height="200" style="display:block;"/>
+      `
+            : ''
+        }
 
-  //     <b>Use the Employee ID for attendance at the system.</b>
 
-  //     <p>Your account has been added by the organization administrator.
-  //     If you believe any of the above details are incorrect, please contact your admin for assistance.</p>
+      <b>Use the Employee ID for attendance at the system.</b>
 
-  //     <p>Thank you for being part of <b>${org.name}</b>.
-  //     We look forward to your valuable contribution.</p>
+      <p>Your account has been added by the organization administrator.
+      If you believe any of the above details are incorrect, please contact your admin for assistance.</p>
 
-  //     <p>Best regards,<br/>
-  //     <b>SegueIT Visitor Management Team</b></p>
-  //   `,
-  //   };
+      <p>Thank you for being part of <b>${org.name}</b>.
+      We look forward to your valuable contribution.</p>
 
-  //   await this.transporter.sendMail(mailOptions);
-  // }
+      <p>Best regards,<br/>
+      <b>SegueIT Visitor Management Team</b></p>
+    `,
+      attachments: staff.qrCodeBuffer
+        ? [
+            {
+              filename: 'employee-qr.png',
+              content: staff.qrCodeBuffer,
+              cid: 'empQrCode', // IMPORTANT: must match <img src="cid:empQrCode">
+            },
+          ]
+        : [],
+    };
+
+    await this.transporter.sendMail(mailOptions);
+  }
 }

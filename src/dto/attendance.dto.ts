@@ -1,9 +1,21 @@
 // src/attendance/dto/attendance.dto.ts
-import { IsString, IsISO8601, IsOptional, IsIn } from 'class-validator';
+import {
+  IsString,
+  IsISO8601,
+  IsOptional,
+  IsIn,
+  IsEmail,
+} from 'class-validator';
 
 export class ScanAttendanceDto {
   @IsString()
+  @IsOptional()
   employeeCode: string;
+
+  @IsString()
+  @IsEmail()
+  @IsOptional()
+  email: string;
 
   @IsISO8601()
   scanTime: string; // ISO string
