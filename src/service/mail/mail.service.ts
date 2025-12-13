@@ -363,7 +363,7 @@ export class MailService {
       We look forward to your valuable contribution.</p>
 
       <p>Best regards,<br/>
-      <b>SegueIT Visitor Management Team</b></p>
+      <b>SegueVisit Visitor Management Team</b></p>
     `,
     };
 
