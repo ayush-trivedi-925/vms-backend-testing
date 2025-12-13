@@ -124,6 +124,7 @@ export class StaffService {
         },
         include: {
           department: true,
+          organization: true,
         },
       });
     });
@@ -146,7 +147,8 @@ export class StaffService {
           email: staffMember.email,
           employeeCode: staffMember.employeeCode,
           designation: staffMember.designation,
-          department: staffMember.department?.name ?? 'N/A',
+          departmentName: staffMember.department?.name ?? 'N/A',
+          orgName: staffMember.organization.name,
           qrCodeBuffer,
         },
         organizationExists,

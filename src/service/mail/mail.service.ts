@@ -15,6 +15,8 @@ export class MailService {
         user: this.configService.get<string>('mail.user'),
         pass: this.configService.get<string>('mail.password'),
       },
+      // logger: true, // <-- enables built-in Nodemailer logging
+      // debug: true, // <-- prints SMTP traffic
     });
   }
 
@@ -330,7 +332,7 @@ export class MailService {
 
   async StaffRegistration(staff: any, org: any) {
     const mailOptions = {
-      from: `"Visitor Management System" <no-reply@segueit.com>`,
+      from: `"Visitor Management System" <segueit.sb@gmail.com>`,
       to: staff?.email,
       subject: `Your Staff Account Has Been Successfully Created - ${org.name}`,
       html: `
@@ -349,14 +351,7 @@ export class MailService {
         <li><b>Organization:</b> ${org.name}</li>
         
       </ul>
-        ${
-          staff.qrCodeBuffer
-            ? `
-        <p>QR Code:</p>
-        <img src="cid:empQrCode" alt="Employee QR Code" width="200" height="200" style="display:block;"/>
-      `
-            : ''
-        }
+      
 
 
       <b>Use the Employee ID for attendance at the system.</b>
@@ -370,15 +365,6 @@ export class MailService {
       <p>Best regards,<br/>
       <b>SegueIT Visitor Management Team</b></p>
     `,
-      attachments: staff.qrCodeBuffer
-        ? [
-            {
-              filename: 'employee-qr.png',
-              content: staff.qrCodeBuffer,
-              cid: 'empQrCode', // IMPORTANT: must match <img src="cid:empQrCode">
-            },
-          ]
-        : [],
     };
 
     await this.transporter.sendMail(mailOptions);
