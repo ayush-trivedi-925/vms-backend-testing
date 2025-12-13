@@ -1,4 +1,4 @@
-name: 🚀 Auto Deploy Backend to EC2
+name: 🚀 Auto Deploy Backend (Self-Hosted)
 
 on:
   push:
@@ -7,21 +7,15 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: 🚀 Deploy via SSH
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
-          script: |
-            echo "==============================="
-            echo "🚀 Triggering backend deployment"
-            echo "==============================="
-            bash ~/vms/deploy.sh
-            echo "✅ Deployment completed successfully!"
+      - name: 🚀 Deploy Backend
+        run: |
+          echo "==============================="
+          echo "🚀 Triggering backend deployment"
+          echo "==============================="
+          bash ~/vms/deploy.sh
+          echo "✅ Deployment completed successfully!"
