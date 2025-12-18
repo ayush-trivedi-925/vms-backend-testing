@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
 
@@ -12,6 +13,7 @@ import {
 } from '@prisma/client';
 
 import { ScanAttendanceDto, AttendanceActionDto } from '../dto/attendance.dto';
+import * as ExcelJS from 'exceljs';
 
 type AttendanceState =
   | 'NO_SESSION_TODAY'
@@ -25,6 +27,32 @@ export class AttendanceService {
 
   private startOfDay(date: Date): Date {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  }
+
+  private getCurrentMonthRange() {
+    const now = new Date();
+    return {
+      start: new Date(now.getFullYear(), now.getMonth(), 1),
+      end: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999),
+    };
+  }
+
+  private toLocalDate(date?: Date | null) {
+    if (!date) return null;
+
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  }
+  private formatWorkDuration(seconds: number): string {
+    if (!seconds || seconds <= 0) return '0 mins';
+
+    const minutes = Math.round(seconds / 60);
+
+    if (minutes < 60) {
+      return `${minutes} mins`;
+    }
+
+    const hours = minutes / 60;
+    return `${hours.toFixed(2)} hrs`;
   }
 
   private async getStaffByEmployeeCode(
@@ -669,5 +697,105 @@ export class AttendanceService {
         newPunchInTime: punchIn.toISOString(),
       };
     });
+  }
+
+  async exportLastMonthAttendance(
+    orgId: string,
+    userId: string,
+    role: string,
+    staffId: string,
+  ) {
+    const allowedRoles = ['SuperAdmin', 'Admin'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException('Invalid role.');
+    }
+
+    const { start, end } = this.getCurrentMonthRange();
+
+    const organizationExists =
+      await this.databaseService.organization.findUnique({
+        where: {
+          id: orgId,
+        },
+      });
+
+    if (!organizationExists) {
+      throw new BadRequestException('Invalid organization id.');
+    }
+
+    const userExists = await this.databaseService.userCredential.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (!userExists || userExists.orgId !== orgId) {
+      throw new BadRequestException('Invalid user.');
+    }
+
+    const staffExists = await this.databaseService.staff.findUnique({
+      where: {
+        id: staffId,
+      },
+    });
+
+    if (!staffExists) {
+      throw new NotFoundException('Invalid staff.');
+    }
+
+    const sessions = await this.databaseService.attendanceSession.findMany({
+      where: {
+        orgId,
+        staffId,
+        status: 'CLOSED',
+        date: {
+          gte: start,
+          lte: end,
+        },
+      },
+      orderBy: { date: 'asc' },
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Last Month Attendance');
+
+    sheet.columns = [
+      { header: 'Closure Type', key: 'closureType', width: 15 },
+      { header: 'Is Late Closure', key: 'isLateClosure', width: 15 },
+      { header: 'Late Punch-out Reason', key: 'lateReason', width: 30 },
+      {
+        header: 'Late Punch-out Recorded At',
+        key: 'lateRecordedAt',
+        width: 25,
+      },
+      { header: 'First Punch-in Time', key: 'firstPunchIn', width: 25 },
+      { header: 'Last Punch-out Time', key: 'lastPunchOut', width: 25 },
+      { header: 'Total Work Duration', key: 'workHours', width: 20 },
+
+      { header: 'Total Break Minutes', key: 'breakMinutes', width: 22 },
+    ];
+
+    sessions.forEach((s) => {
+      sheet.addRow({
+        closureType: s.closureType ?? '—',
+        isLateClosure: s.isLateClosure ? 'Yes' : 'No',
+        lateReason: s.latePunchOutReason ?? '',
+        lateRecordedAt: this.toLocalDate(s.latePunchOutRecordedAt),
+        firstPunchIn: this.toLocalDate(s.firstPunchInAt),
+        lastPunchOut: this.toLocalDate(s.lastPunchOutAt),
+        workHours: this.formatWorkDuration(s.totalWorkSeconds),
+
+        breakMinutes: this.formatWorkDuration(s.totalBreakSeconds),
+      });
+    });
+
+    // Header styling
+    sheet.getRow(1).font = { bold: true };
+    sheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+    sheet.getColumn('lateRecordedAt').numFmt = 'dd-mmm-yyyy hh:mm AM/PM';
+    sheet.getColumn('firstPunchIn').numFmt = 'dd-mmm-yyyy hh:mm AM/PM';
+    sheet.getColumn('lastPunchOut').numFmt = 'dd-mmm-yyyy hh:mm AM/PM';
+
+    return { workbook, employeeCode: staffExists.employeeCode };
   }
 }
