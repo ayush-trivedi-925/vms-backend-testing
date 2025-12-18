@@ -427,12 +427,38 @@ export class StaffService {
       throw new NotFoundException("Organization doesn't exist.");
     }
 
+    const startOfToday = dayjs().tz(tz).startOf('day').toDate(); // local-day start -> Date
+    const startOfTomorrow = dayjs()
+      .tz(tz)
+      .add(1, 'day')
+      .startOf('day')
+      .toDate();
+
     const staffExists = await this.databaseService.staff.findUnique({
       where: {
         id: staffId,
       },
       include: {
-        organization: true,
+        department: true,
+        attendanceEvents: {
+          where: {
+            timestamp: {
+              gte: startOfToday,
+              lt: startOfTomorrow,
+            },
+          },
+          orderBy: { timestamp: 'desc' },
+        },
+        attendanceSessions: {
+          where: {
+            date: {
+              gte: startOfToday,
+              lt: startOfTomorrow,
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
       },
     });
     if (!staffExists) {

@@ -160,7 +160,11 @@ export class AttendanceService {
       switch (e.eventType) {
         case AttendanceEventType.PUNCH_IN:
         case AttendanceEventType.BREAK_END:
-          // work segment starts
+          if (currentBreakStart) {
+            totalBreakSeconds +=
+              (e.timestamp.getTime() - currentBreakStart.getTime()) / 1000;
+          }
+          currentBreakStart = null;
           currentWorkStart = e.timestamp;
           break;
 
@@ -262,13 +266,17 @@ export class AttendanceService {
       };
     }
 
+    const date = this.startOfDay(session!.date);
+
+    const previousDate = date.toISOString().split('T')[0];
+
     // PREVIOUS_SESSION_OPEN
     return {
       staffId: staff.id,
       staffName: staff.name,
       state: 'PREVIOUS_SESSION_OPEN' as AttendanceState,
       sessionId: session!.id,
-      previousDate: this.startOfDay(session!.date).toISOString().slice(0, 10),
+      previousDate,
       allowedActions: ['LATE_PUNCH_OUT_AND_PUNCH_IN'],
       message:
         'You forgot to punch out on previous day. Please enter your approximate punch-out time and reason.',
