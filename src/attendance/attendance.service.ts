@@ -37,11 +37,15 @@ export class AttendanceService {
     };
   }
 
-  private toLocalDate(date?: Date | null) {
+  private toLocalDate(date?: Date | null): Date | null {
     if (!date) return null;
 
-    return new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    // Convert UTC date → local date
+    const local = new Date(date);
+    local.setMinutes(local.getMinutes() - local.getTimezoneOffset());
+    return local;
   }
+
   private formatWorkDuration(seconds: number): string {
     if (!seconds || seconds <= 0) return '0 mins';
 
