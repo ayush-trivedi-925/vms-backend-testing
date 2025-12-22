@@ -37,7 +37,7 @@ export class DepartmentController {
   async addReasonBulk(
     @Req() req,
     @Body() departmentList: CreateDepartmentDto[],
-    @Query('qOrgId') qOrgId: string,
+    @Query('qOrgId') qOrgId?: string,
   ) {
     if (!Array.isArray(departmentList) || departmentList.length === 0) {
       throw new BadRequestException('Staff list must be a non-empty array.');
