@@ -23,14 +23,14 @@ export class StaffController {
   @Post('')
   async addStaffMember(
     @Req() req,
-    @Query('qOrgId') qOrgId: string,
     @Body() addStaffMemberDto: AddStaffMemberDto,
+    @Query('qOrgId') qOrgId?: string,
   ) {
     return this.staffService.addStaffMember(
       req.orgId ?? null,
       req.role,
       addStaffMemberDto,
-      qOrgId ?? null,
+      qOrgId ?? undefined,
     );
   }
 

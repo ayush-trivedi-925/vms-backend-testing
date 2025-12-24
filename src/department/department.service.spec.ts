@@ -213,7 +213,7 @@ describe('DepartmentService', () => {
   });
 
   // -------------------
-  it('should create department successfully', async () => {
+  it('should delete department successfully', async () => {
     mockDatabaseService.userCredential.findUnique.mockResolvedValue({
       orgId: 'org-1',
       id: 'user-1',

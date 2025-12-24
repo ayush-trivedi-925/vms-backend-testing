@@ -68,35 +68,6 @@ export class AuthService {
     };
   }
 
-  // async registerUserWithRole(registerUserWithRoleDto: RegisterUserWithRoleDto) {
-  //   const { email, password, role, orgId } = registerUserWithRoleDto;
-
-  //   const userExists = await this.databaseService.userCredential.findUnique({
-  //     where: {
-  //       email,
-  //     },
-  //   });
-  //   if (userExists) {
-  //     throw new BadRequestException('User exists already.');
-  //   }
-  //   const hashedPassword = await bcrypt.hash(password, 10);
-
-  //   const user = await this.databaseService.userCredential.create({
-  //     data: {
-  //       email,
-  //       password: hashedPassword,
-  //       role,
-  //       orgId,
-  //     },
-  //   });
-
-  //   return {
-  //     Success: true,
-  //     Message: 'User has been registered successfully.',
-  //     UserDetails: user,
-  //   };
-  // }
-
   async loginUser(email: string, password: string, newPassword?: string) {
     let user = await this.databaseService.userCredential.findUnique({
       where: { email },
