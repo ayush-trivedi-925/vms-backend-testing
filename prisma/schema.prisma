@@ -28,6 +28,7 @@ model Organization {
   reasonOfVisits  ReasonOfVisit[]
    attendanceSessions AttendanceSession[]
   attendanceEvents AttendanceEvent[]
+  teams Team[]
 
 }
 
@@ -71,6 +72,11 @@ model Staff {
   visits Visit[]
   attendanceSessions AttendanceSession[]
   attendanceEvents AttendanceEvent[]
+  teamMemberships   TeamMember[]         @relation("TeamMemberStaff")
+  reportsTo         TeamReporting[]      @relation("Reportee")
+  manages           TeamReporting[]      @relation("Manager")
+  masterOfTeams     Team[]               @relation("MasterManager")
+  
 }
 
 model AttendanceSession {
@@ -242,4 +248,58 @@ enum AccountStatusEnum {
 enum LoginStatus {
   LoggedIn
   LoggedOut
+}
+
+model Team {
+  id        String   @id @default(uuid())
+  orgId     String
+  name      String
+
+  // master manager of the team
+  masterManagerId String
+  masterManager   Staff     @relation("MasterManager", fields: [masterManagerId], references: [id], onDelete: Cascade)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  // relations
+  members     TeamMember[]
+  reporting   TeamReporting[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TeamMember {
+  id      String @id @default(uuid())
+  teamId  String
+  staffId String
+
+  team  Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  staff Staff @relation("TeamMemberStaff", fields: [staffId], references: [id], onDelete: Cascade)
+
+  
+  // A member can have multiple reportings
+  reportings TeamReporting[] @relation("MemberToReporting")
+
+  // ensure a person can only be once in a team
+  @@unique([teamId, staffId])
+}
+
+
+model TeamReporting {
+  id        String @id @default(uuid())
+  teamId    String
+  staffId   String        // person who reports
+  managerId String        // person they report to, inside team
+
+    // The link that enables cascade
+  teamMemberId String?
+  teamMember   TeamMember? @relation("MemberToReporting", fields: [teamMemberId], references: [id], onDelete: Cascade)
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  staff   Staff @relation("Reportee", fields: [staffId], references: [id], onDelete: Cascade)
+  manager Staff @relation("Manager",  fields: [managerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
 }

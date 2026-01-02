@@ -63,11 +63,13 @@ export class AuthGuard implements CanActivate {
       if (decode.userId) {
         (request as any).userId = decode.userId;
       }
+
       (request as any).orgId = decode.orgId;
       (request as any).role = decode.role;
       if (!decode.systemId && !decode.userId) {
         throw new UnauthorizedException('Invalid token payload!');
       }
+
       return true;
     } catch (error) {
       if (error instanceof TokenExpiredError) {

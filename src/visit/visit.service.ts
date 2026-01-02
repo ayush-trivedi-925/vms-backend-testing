@@ -156,7 +156,7 @@ export class VisitService {
     systemId?: string,
     role?: string,
   ) {
-    const allowedRoles = ['SuperAdmin', 'Admin', 'System'];
+    const allowedRoles = ['SuperAdmin', 'Admin', 'System', 'Staff'];
     let imageUrl: string | null = null;
     const { fullName, email } = endVisitDto;
     const normalizedEmail = email.toLowerCase().trim();
@@ -386,6 +386,48 @@ export class VisitService {
     };
   }
 
+  async allOnGoingVisitsStaff(orgId: string, role: string, staffId: string) {
+    const allowedRoles = ['SuperAdmin', 'Admin', 'Root', 'Staff'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException(
+        'Only admins, superadmin and root user have permission to access on-going visits.',
+      );
+    }
+
+    const allOnGoingVisits = await this.databaseService.visit.findMany({
+      where: {
+        orgId,
+        status: 'ONGOING',
+        staff: {
+          userId: staffId,
+        },
+      },
+      include: {
+        staff: {
+          include: {
+            department: true,
+          },
+        },
+        reasonOfVisit: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    if (allOnGoingVisits.length === 0) {
+      return {
+        success: false,
+        Message: 'There are no current on-going visits.',
+      };
+    }
+
+    return {
+      success: true,
+      allOnGoingVisits: allOnGoingVisits,
+    };
+  }
+
   async allCompletedVisits(orgId: string, role: string) {
     const allowedRoles = ['SuperAdmin', 'Admin', 'Root'];
     if (!allowedRoles.includes(role)) {
@@ -398,6 +440,47 @@ export class VisitService {
       where: {
         orgId,
         status: 'COMPLETED',
+      },
+      include: {
+        staff: {
+          include: {
+            department: true,
+          },
+        },
+        reasonOfVisit: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    if (allCompletedVisits.length === 0) {
+      return {
+        success: false,
+        Message: 'There are no current completed visits.',
+      };
+    }
+
+    return {
+      success: true,
+      allCompletedVisits: allCompletedVisits,
+    };
+  }
+  async allCompletedVisitsStaff(orgId: string, role: string, staffId: string) {
+    const allowedRoles = ['SuperAdmin', 'Admin', 'Root', 'Staff'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException(
+        'Only admins, superadmin and root user have permission to access completed visits.',
+      );
+    }
+
+    const allCompletedVisits = await this.databaseService.visit.findMany({
+      where: {
+        orgId,
+        status: 'COMPLETED',
+        staff: {
+          userId: staffId,
+        },
       },
       include: {
         staff: {

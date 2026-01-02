@@ -14,6 +14,9 @@ import { CloudinaryService } from './media/cloudinary.service';
 import { DepartmentModule } from './department/department.module';
 import { ReasonModule } from './reason/reason.module';
 import { AttendanceModule } from './attendance/attendance.module';
+import { TeamController } from './team/team.controller';
+import { TeamService } from './team/team.service';
+import { TeamModule } from './team/team.module';
 
 @Module({
   imports: [
@@ -42,6 +45,7 @@ import { AttendanceModule } from './attendance/attendance.module';
     DepartmentModule,
     ReasonModule,
     AttendanceModule,
+    TeamModule,
   ],
   controllers: [AppController],
   providers: [AppService, CloudinaryService],

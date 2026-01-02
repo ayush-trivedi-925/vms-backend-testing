@@ -229,7 +229,7 @@ export class OrganizationService {
   }
 
   async getOrganizationDetails(orgId: string, role: string) {
-    const allowedRoles = ['Root', 'SuperAdmin', 'Admin', 'System'];
+    const allowedRoles = ['Root', 'SuperAdmin', 'Admin', 'System', 'Staff'];
     if (!allowedRoles.includes(role)) {
       throw new UnauthorizedException(
         'Only Root, SuperAdmin, Admin and System can access details of the organization.',

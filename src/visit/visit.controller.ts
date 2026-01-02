@@ -73,9 +73,27 @@ export class VisitController {
     return this.visitService.allOnGoingVisits(req.orgId, req.role);
   }
 
+  @Get(':staffId/ongoing')
+  async allOnGoingVisitsStaff(@Req() req, @Param('staffId') staffId: string) {
+    return this.visitService.allOnGoingVisitsStaff(
+      req.orgId,
+      req.role,
+      staffId,
+    );
+  }
+
   @Get('completed')
   async allCompletedVisits(@Req() req) {
     return this.visitService.allCompletedVisits(req.orgId, req.role);
+  }
+
+  @Get(':staffId/completed')
+  async allCompletedVisitsStaff(@Req() req, @Param('staffId') staffId: string) {
+    return this.visitService.allCompletedVisitsStaff(
+      req.orgId,
+      req.role,
+      staffId,
+    );
   }
 
   // visit.controller.ts

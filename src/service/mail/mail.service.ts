@@ -343,6 +343,7 @@ export class MailService {
       <p>Here are your registration details:</p>
 
       <ul>
+        <li><b>One time password:</b> ${staff.oneTimePassword}</li>
         <li><b>Name:</b> ${staff.name}</li>
         <li><b>Email:</b> ${staff.email}</li>
         <li><b>Employee ID:</b> ${staff.employeeCode}</li>
@@ -352,6 +353,7 @@ export class MailService {
         
       </ul>
       
+      <b>Use on time password to login to the dashboard at https://vms.seguevisit.com/login</b>
 
 
       <b>Use the Employee ID for attendance at the system.</b>

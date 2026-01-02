@@ -107,13 +107,17 @@ export class StaffService {
       throw new BadRequestException('Member already exist.');
     }
 
-    const staffMember = await this.databaseService.$transaction(async (tx) => {
+    const result = await this.databaseService.$transaction(async (tx) => {
       const employeeCode = await this.generateUniqueEmployeeCode(
         tx,
         targetOrgId,
       );
+      const oneTimePassword = this.generateOneTimePassword(
+        organizationExists.name,
+      );
+      const hashedPassword = await bcrypt.hash(oneTimePassword, 10);
 
-      return tx.staff.create({
+      const staff = await tx.staff.create({
         data: {
           orgId: targetOrgId,
           name,
@@ -127,13 +131,29 @@ export class StaffService {
           organization: true,
         },
       });
+
+      // Create a new UserCredential (active by default)
+      await tx.userCredential.create({
+        data: {
+          orgId: targetOrgId,
+          email: normalizedEmail,
+          password: hashedPassword,
+          role: 'Staff',
+          firstTimeLogin: true,
+          staff: {
+            connect: { id: staff.id },
+          },
+        },
+      });
+
+      return { staff, oneTimePassword };
     });
 
     let qrCodeBuffer: Buffer | null = null;
     try {
       // Generate QR code as buffer
       qrCodeBuffer = await QRCode.toBuffer(
-        JSON.stringify({ empId: staffMember.employeeCode }),
+        JSON.stringify({ empId: result.staff.employeeCode }),
       );
     } catch (err) {
       console.error('Failed to generate QR code', err);
@@ -143,12 +163,13 @@ export class StaffService {
     try {
       await this.mailService.StaffRegistration(
         {
-          name: staffMember.name,
-          email: staffMember.email,
-          employeeCode: staffMember.employeeCode,
-          designation: staffMember.designation,
-          departmentName: staffMember.department?.name ?? 'N/A',
-          orgName: staffMember.organization.name,
+          name: result.staff.name,
+          email: result.staff.email,
+          employeeCode: result.staff.employeeCode,
+          designation: result.staff.designation,
+          departmentName: result.staff.department?.name ?? 'N/A',
+          orgName: result.staff.organization.name,
+          oneTimePassword: result.oneTimePassword,
           qrCodeBuffer,
         },
         organizationExists,
@@ -161,7 +182,7 @@ export class StaffService {
     return {
       success: true,
       message: `${name} has been added successfully.`,
-      staffMemberDetails: staffMember,
+      staffMemberDetails: result.staff,
     };
   }
 
@@ -406,7 +427,7 @@ export class StaffService {
     userId: string,
     qOrgId?: string,
   ) {
-    const allowedRoles = ['Root', 'SuperAdmin', 'Admin', 'System'];
+    const allowedRoles = ['Root', 'SuperAdmin', 'Admin', 'System', 'Staff'];
     if (!allowedRoles.includes(role)) {
       throw new UnauthorizedException(
         'Only root, superadmin, and admin can access the staff members of an organization.',
@@ -480,7 +501,7 @@ export class StaffService {
     role: string,
     userId: string,
   ) {
-    const allowedRoles = ['SuperAdmin', 'Admin'];
+    const allowedRoles = ['SuperAdmin', 'Admin', 'Staff'];
     if (!allowedRoles.includes(role)) {
       throw new UnauthorizedException(
         'Only superadmin, and admin can access the staff members of an organization.',
@@ -507,6 +528,7 @@ export class StaffService {
       },
       include: {
         organization: true,
+        department: true,
       },
     });
     if (!staffExists) {

@@ -109,7 +109,7 @@ export class AuthService {
         throw new NotFoundException("User doesn't exist");
       }
 
-      if (user.accountStatus === 'Disabled' || user.role === 'Staff') {
+      if (user.accountStatus === 'Disabled') {
         throw new UnauthorizedException(
           "You don't have permission to access dashboard",
         );
@@ -124,7 +124,7 @@ export class AuthService {
         throw new BadRequestException('Password update failed.');
       }
     } else {
-      if (user.accountStatus === 'Disabled' || user.role === 'Staff') {
+      if (user.accountStatus === 'Disabled') {
         throw new UnauthorizedException(
           "You don't have permission to access dashboard",
         );
@@ -224,6 +224,7 @@ export class AuthService {
       newRole: userExists.role,
     };
   }
+
   async forgotPassword(email: string) {
     if (!email) {
       throw new BadRequestException('Provide a valid email address.');
@@ -330,6 +331,7 @@ export class AuthService {
       message: 'Password reset successfully',
     };
   }
+
   async changeOldPassword(
     userId: string,
     oldPassword: string,
