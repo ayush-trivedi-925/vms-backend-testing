@@ -73,18 +73,15 @@ export class VisitController {
     return this.visitService.allOnGoingVisits(req.orgId, req.role);
   }
 
-  @Get(':staffId/ongoing')
-  async allOnGoingVisitsStaff(@Req() req, @Param('staffId') staffId: string) {
-    return this.visitService.allOnGoingVisitsStaff(
-      req.orgId,
-      req.role,
-      staffId,
-    );
-  }
-
   @Get('completed')
   async allCompletedVisits(@Req() req) {
     return this.visitService.allCompletedVisits(req.orgId, req.role);
+  }
+
+  // visit.controller.ts
+  @Get('visitors-per-department')
+  async getVisitorsPerDepartment(@Req() req) {
+    return this.visitService.getVisitorsPerDepartment(req.orgId);
   }
 
   @Get(':staffId/completed')
@@ -96,10 +93,13 @@ export class VisitController {
     );
   }
 
-  // visit.controller.ts
-  @Get('visitors-per-department')
-  async getVisitorsPerDepartment(@Req() req) {
-    return this.visitService.getVisitorsPerDepartment(req.orgId);
+  @Get(':staffId/ongoing')
+  async allOnGoingVisitsStaff(@Req() req, @Param('staffId') staffId: string) {
+    return this.visitService.allOnGoingVisitsStaff(
+      req.orgId,
+      req.role,
+      staffId,
+    );
   }
 
   @Get(':orgId/summary')

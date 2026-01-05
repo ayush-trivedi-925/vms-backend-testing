@@ -454,6 +454,8 @@ export class VisitService {
       },
     });
 
+    console.log(allCompletedVisits);
+
     if (allCompletedVisits.length === 0) {
       return {
         success: false,
@@ -520,6 +522,9 @@ export class VisitService {
     }
 
     const allVisits = await this.databaseService.visit.findMany({
+      where: {
+        orgId,
+      },
       include: {
         staff: {
           include: {
@@ -532,6 +537,7 @@ export class VisitService {
     const completedVisits = await this.databaseService.visit.findMany({
       where: {
         status: 'COMPLETED',
+        orgId,
       },
       include: {
         staff: {
@@ -545,6 +551,7 @@ export class VisitService {
     const ongoingVisits = await this.databaseService.visit.findMany({
       where: {
         status: 'ONGOING',
+        orgId,
       },
       include: {
         staff: {
