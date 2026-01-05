@@ -454,8 +454,6 @@ export class VisitService {
       },
     });
 
-    console.log(allCompletedVisits);
-
     if (allCompletedVisits.length === 0) {
       return {
         success: false,

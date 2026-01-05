@@ -28,6 +28,73 @@ export class VisitController {
     private readonly visitService: VisitService,
     private readonly visitAnalyticsService: VisitAnalyticsService,
   ) {}
+
+  @Get('ongoing')
+  async allOnGoingVisits(@Req() req) {
+    return this.visitService.allOnGoingVisits(req.orgId, req.role);
+  }
+
+  @Get('completed')
+  async allCompletedVisits(@Req() req) {
+    return this.visitService.allCompletedVisits(req.orgId, req.role);
+  }
+
+  @Get('visitors-per-department')
+  async getVisitorsPerDepartment(@Req() req) {
+    return this.visitService.getVisitorsPerDepartment(req.orgId);
+  }
+
+  @Get('export')
+  async exportExcel(
+    @Req() req,
+    @Res() res,
+    @Query('filter') filter: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    const orgId = req.orgId;
+    const role = req.role;
+
+    const excelBuffer = await this.visitService.exportCompletedVisits(
+      orgId,
+      role,
+      filter as any,
+      startDate,
+      endDate,
+    );
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="completed_visits.xlsx"`,
+    );
+
+    res.send(excelBuffer);
+  }
+
+  // ---------------------------------------------
+
+  @Get('staff/:staffId/completed')
+  async allCompletedVisitsStaff(@Req() req, @Param('staffId') staffId: string) {
+    return this.visitService.allCompletedVisitsStaff(
+      req.orgId,
+      req.role,
+      staffId,
+    );
+  }
+
+  @Get('staff/:staffId/ongoing')
+  async allOnGoingVisitsStaff(@Req() req, @Param('staffId') staffId: string) {
+    return this.visitService.allOnGoingVisitsStaff(
+      req.orgId,
+      req.role,
+      staffId,
+    );
+  }
+
   @UseInterceptors(FileInterceptor('checkInPicture', multerConfig))
   @Post('check-in')
   async startVisit(
@@ -68,41 +135,7 @@ export class VisitController {
     );
   }
 
-  @Get('ongoing')
-  async allOnGoingVisits(@Req() req) {
-    return this.visitService.allOnGoingVisits(req.orgId, req.role);
-  }
-
-  @Get('completed')
-  async allCompletedVisits(@Req() req) {
-    return this.visitService.allCompletedVisits(req.orgId, req.role);
-  }
-
-  // visit.controller.ts
-  @Get('visitors-per-department')
-  async getVisitorsPerDepartment(@Req() req) {
-    return this.visitService.getVisitorsPerDepartment(req.orgId);
-  }
-
-  @Get(':staffId/completed')
-  async allCompletedVisitsStaff(@Req() req, @Param('staffId') staffId: string) {
-    return this.visitService.allCompletedVisitsStaff(
-      req.orgId,
-      req.role,
-      staffId,
-    );
-  }
-
-  @Get(':staffId/ongoing')
-  async allOnGoingVisitsStaff(@Req() req, @Param('staffId') staffId: string) {
-    return this.visitService.allOnGoingVisitsStaff(
-      req.orgId,
-      req.role,
-      staffId,
-    );
-  }
-
-  @Get(':orgId/summary')
+  @Get('analytics/:orgId/summary')
   getSummary(
     @Param('orgId') orgId: string,
     @Query('period') period: 'day' | 'week' | 'month' | 'year' | 'all' = 'all',
@@ -110,17 +143,17 @@ export class VisitController {
     return this.visitAnalyticsService.getVisitStats(orgId, period);
   }
 
-  @Get(':orgId/top-employees')
+  @Get('analytics/:orgId/top-employees')
   getTopEmployees(@Param('orgId') orgId: string, @Query('period') period: any) {
     return this.visitAnalyticsService.getTopEmployees(orgId, period);
   }
 
-  @Get(':orgId/top-visitors')
+  @Get('analytics/:orgId/top-visitors')
   getTopVisitors(@Param('orgId') orgId: string, @Query('period') period: any) {
     return this.visitAnalyticsService.getTopVisitors(orgId, period);
   }
 
-  @Get(':orgId/top-departments')
+  @Get('analytics/:orgId/top-departments')
   getTopDepartments(
     @Param('orgId') orgId: string,
     @Query('period') period: any,
@@ -128,43 +161,12 @@ export class VisitController {
     return this.visitAnalyticsService.getTopDepartments(orgId, period);
   }
 
-  @Get(':orgId/top-reasons')
+  @Get('analytics/:orgId/top-reasons')
   getTopReasons(@Param('orgId') orgId: string, @Query('period') period: any) {
     return this.visitAnalyticsService.getTopReasons(orgId, period);
   }
 
-  @Get('export')
-  async exportExcel(
-    @Req() req,
-    @Res() res,
-    @Query('filter') filter: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-  ) {
-    const orgId = req.orgId;
-    const role = req.role;
-
-    const excelBuffer = await this.visitService.exportCompletedVisits(
-      orgId,
-      role,
-      filter as any,
-      startDate,
-      endDate,
-    );
-
-    res.setHeader(
-      'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    );
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="completed_visits.xlsx"`,
-    );
-
-    res.send(excelBuffer);
-  }
-
-  @Get(':visitId')
+  @Get('details/:visitId')
   async getVisitDetails(@Req() req, @Param('visitId') visitId: string) {
     return this.visitService.getOnGoingVisitDetails(
       req.orgId,
