@@ -29,7 +29,8 @@ model Organization {
    attendanceSessions AttendanceSession[]
   attendanceEvents AttendanceEvent[]
   teams Team[]
-
+ subscription Subscription?
+ featureUsages FeatureUsage[]
 }
 
 model Visit {
@@ -302,4 +303,77 @@ model TeamReporting {
   manager Staff @relation("Manager",  fields: [managerId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
+}
+
+
+model Plan {
+  id          String   @id @default(uuid())
+  code        String   @unique // FREE, PRO, ENTERPRISE
+  name        String
+  billingCycle BillingCycle 
+  price       Int
+  isActive    Boolean @default(true)
+
+  features    PlanFeature[]
+  subscriptions Subscription[]
+
+  createdAt   DateTime @default(now())
+}
+
+
+enum BillingCycle {
+  YEARLY
+  MONTHLY
+  WEEKLY
+}
+
+model PlanFeature {
+  id        String @id @default(uuid())
+  planId   String
+  feature  FeatureCode
+  limit    Int?   // null = unlimited, 0 = disabled
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, feature])
+}
+
+enum FeatureCode {
+ VMS_ACCESS
+ STAFF_MANAGEMENT_ACCESS
+}
+
+model Subscription {
+  id        String   @id @default(uuid())
+  orgId     String   @unique
+  planId    String
+
+  status    SubscriptionStatus
+  startsAt  DateTime
+  endsAt    DateTime
+  trialEndsAt DateTime?
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  EXPIRED
+  CANCELED
+}
+
+model FeatureUsage {
+  id          String @id @default(uuid())
+  orgId       String
+  feature     FeatureCode
+  used        Int
+  periodStart DateTime
+  periodEnd   DateTime
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  @@unique([orgId, feature, periodStart])
 }

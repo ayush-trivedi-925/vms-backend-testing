@@ -17,6 +17,7 @@ import { AttendanceModule } from './attendance/attendance.module';
 import { TeamController } from './team/team.controller';
 import { TeamService } from './team/team.service';
 import { TeamModule } from './team/team.module';
+import { PlanModule } from './plan/plan.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { TeamModule } from './team/team.module';
     ReasonModule,
     AttendanceModule,
     TeamModule,
+    PlanModule,
   ],
   controllers: [AppController],
   providers: [AppService, CloudinaryService],
