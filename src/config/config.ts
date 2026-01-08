@@ -16,4 +16,10 @@ export default () => ({
   encryption: {
     key: process.env.ENCRYPTION_KEY,
   },
+  aws: {
+    region: process.env.AWS_REGION,
+    s3Bucket: process.env.AWS_S3_BUCKET,
+    s3AccessKey: process.env.AWS_ACCESS_KEY_ID,
+    s3SecretKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
 });

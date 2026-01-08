@@ -176,7 +176,7 @@ export class PlanService {
 
       // Feature logic
       if (features) {
-        this.updatePlanFeatures(tx, planId, features);
+        await this.updatePlanFeatures(tx, planId, features);
       }
     });
 
