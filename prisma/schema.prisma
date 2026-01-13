@@ -31,6 +31,7 @@ model Organization {
   teams Team[]
  subscription Subscription?
  featureUsages FeatureUsage[]
+ notifications Notification[]
 }
 
 model Visit {
@@ -50,6 +51,7 @@ model Visit {
   checkInPicture  String? 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt  
+  notifications Notification[]
 }
 
 model Staff {
@@ -77,6 +79,7 @@ model Staff {
   reportsTo         TeamReporting[]      @relation("Reportee")
   manages           TeamReporting[]      @relation("Manager")
   masterOfTeams     Team[]               @relation("MasterManager")
+  notifications Notification[]
   
 }
 
@@ -378,4 +381,37 @@ model FeatureUsage {
   periodEnd   DateTime
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   @@unique([orgId, feature, periodStart])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  orgId     String
+  staffId   String
+  visitId   String
+
+  type      NotificationType
+  title     String
+  message   String
+
+  isRead    Boolean  @default(false)
+  action    NotificationAction @default(PENDING)
+
+  createdAt DateTime @default(now())
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  staff        Staff        @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  visit        Visit        @relation(fields: [visitId], references: [id], onDelete: Cascade)
+
+  @@index([staffId, isRead])
+}
+
+enum NotificationType {
+  VISIT_REQUEST
+  SYSTEM
+}
+
+enum NotificationAction {
+  PENDING
+  ACCEPTED
+  REJECTED
 }
