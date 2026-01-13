@@ -517,16 +517,6 @@ export class OrganizationService {
       throw new BadRequestException('startsAt must be before endsAt');
     }
 
-    const subscription = await this.databaseService.subscription.findUnique({
-      where: { orgId },
-    });
-
-    if (!subscription) {
-      throw new NotFoundException(
-        'Subscription not found for this organization',
-      );
-    }
-
     if (!organizationExists) {
       throw new NotFoundException("Organization doesn't exists.");
     }
