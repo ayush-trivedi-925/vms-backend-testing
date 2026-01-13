@@ -8,14 +8,8 @@ on:
 jobs:
   deploy:
     runs-on: self-hosted
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
 
+    steps:
       - name: 🚀 Deploy Backend
         run: |
-          echo "==============================="
-          echo "🚀 Triggering backend deployment"
-          echo "==============================="
           bash ~/vms/deploy.sh
-          echo "✅ Deployment completed successfully!"
