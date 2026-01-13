@@ -17,6 +17,7 @@ import { AuthGuard } from 'src/guard/auth.guard';
 import { EditOrganizationDto } from 'src/dto/edit-organization.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerConfig } from 'src/service/multer/multer.config';
+import { UpdateSubscriptionDto } from 'src/dto/update-subscription.dto';
 
 @UseGuards(AuthGuard)
 @Controller('organization')
@@ -54,6 +55,12 @@ export class OrganizationController {
   async getAllOrganizations(@Req() req) {
     return this.organizationService.getAllOrganization(req.role);
   }
+
+  @Get('plan/:orgId')
+  async getOrgPlanDetails(@Param('orgId') orgId: string, @Req() req) {
+    return this.organizationService.getOrgPlanDetails(orgId, req.role);
+  }
+
   @Get(':orgId')
   async getOrganizationDetails(@Param('orgId') orgId: string, @Req() req) {
     return this.organizationService.getOrganizationDetails(orgId, req.role);
@@ -73,6 +80,20 @@ export class OrganizationController {
       editOrganizationDto,
       req.userId ?? null,
       logo ?? undefined,
+    );
+  }
+
+  @Put(':orgId/plan')
+  async updateOrganizationPlan(
+    @Req() req,
+    @Param('orgId') orgId: string,
+    @Body() dto: UpdateSubscriptionDto,
+  ) {
+    return this.organizationService.updateSubscription(
+      req.userId,
+      req.role,
+      orgId,
+      dto,
     );
   }
 

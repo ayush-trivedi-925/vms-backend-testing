@@ -313,6 +313,7 @@ model Plan {
   billingCycle BillingCycle 
   price       Int
   isActive    Boolean @default(true)
+  description String?
 
   features    PlanFeature[]
   subscriptions Subscription[]
@@ -348,7 +349,8 @@ model Subscription {
   orgId     String   @unique
   planId    String
 
-  status    SubscriptionStatus
+  status    SubscriptionStatus @default(ACTIVE)
+  paidAmount  Int?
   startsAt  DateTime
   endsAt    DateTime
   trialEndsAt DateTime?

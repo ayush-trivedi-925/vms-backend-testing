@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsDateString,
   IsEmail,
   IsInt,
   IsNotEmpty,
@@ -46,4 +47,13 @@ export class CreateOrganizationDto {
   @IsInt()
   @Min(1)
   accountLimit: number;
+
+  @IsString()
+  planId: string;
+
+  @IsDateString()
+  startsAt: string;
+
+  @IsDateString()
+  endsAt: string;
 }

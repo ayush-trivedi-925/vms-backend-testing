@@ -15,7 +15,7 @@ export class PlanService {
   constructor(private readonly databaseService: DatabaseService) {}
 
   async createPlan(dto: CreatePlanDto) {
-    const { code, name, price, billingCycle, features } = dto;
+    const { code, name, price, billingCycle, features, description } = dto;
 
     if (!features || features.length === 0) {
       throw new BadRequestException('A plan must have at least one feature.');
@@ -38,7 +38,13 @@ export class PlanService {
 
     const createdPlan = await this.databaseService.$transaction(async (tx) => {
       const plan = await tx.plan.create({
-        data: { code, name, price, billingCycle },
+        data: {
+          code,
+          name,
+          price,
+          billingCycle,
+          description: description ?? null,
+        },
       });
 
       await tx.planFeature.createMany({

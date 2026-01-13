@@ -26,6 +26,10 @@ export class CreatePlanDto {
   @IsInt()
   price: number;
 
+  @IsString()
+  @IsOptional()
+  description: string;
+
   @ValidateNested({ each: true })
   @Type(() => PlanFeatureDto)
   features: PlanFeatureDto[];

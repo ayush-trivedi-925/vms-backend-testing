@@ -26,6 +26,10 @@ export class UpdatePlanDto {
   price?: number;
 
   @IsOptional()
+  @IsString()
+  description: string;
+
+  @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => UpdatePlanFeatureDto)
   @ArrayMinSize(1)

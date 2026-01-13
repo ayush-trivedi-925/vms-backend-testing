@@ -12,6 +12,7 @@ import { CloudinaryService } from 'src/media/cloudinary.service';
 import { MailService } from 'src/service/mail/mail.service';
 import { encrypt, decrypt } from '../utils/encryption.util';
 import { ConfigService } from '@nestjs/config';
+import { UpdateSubscriptionDto } from 'src/dto/update-subscription.dto';
 
 @Injectable()
 export class OrganizationService {
@@ -43,6 +44,9 @@ export class OrganizationService {
       gst,
       accountLimit,
       settingCode,
+      planId,
+      startsAt,
+      endsAt,
     } = createOrganizationDto;
     const normalizedEmail = email.toLowerCase().trim();
     const organizationExists =
@@ -71,26 +75,59 @@ export class OrganizationService {
 
     const settingCodeEncrypted = encrypt(settingCode, encryptionKey);
 
-    const organization = await this.databaseService.organization.create({
-      data: {
-        name,
-        email: normalizedEmail,
-        address,
-        contactNumber,
-        contactPerson,
-        gst: gst || null,
-        logo: logoUrl,
-        accountLimit,
-        settingCodeEncrypted,
-      },
+    const startsAtDate = new Date(startsAt);
+    const endsAtDate = new Date(endsAt);
+
+    if (isNaN(startsAtDate.getTime()) || isNaN(endsAtDate.getTime())) {
+      throw new BadRequestException('Invalid start or end date');
+    }
+
+    if (endsAtDate <= startsAtDate) {
+      throw new BadRequestException('End date must be after start date');
+    }
+
+    const plan = await this.databaseService.plan.findUnique({
+      where: { id: planId },
     });
 
-    await this.mailService.OrganizationRegistration(organization);
+    if (!plan) {
+      throw new BadRequestException('Invalid plan selected');
+    }
+
+    const result = await this.databaseService.$transaction(async (tx) => {
+      const organization = await tx.organization.create({
+        data: {
+          name,
+          email: normalizedEmail,
+          address,
+          contactNumber,
+          contactPerson,
+          gst: gst || null,
+          logo: logoUrl,
+          accountLimit,
+          settingCodeEncrypted,
+        },
+      });
+
+      const subscription = await tx.subscription.create({
+        data: {
+          orgId: organization.id,
+          planId,
+          startsAt: startsAtDate,
+          endsAt: endsAtDate,
+        },
+      });
+
+      return { organization, subscription };
+    });
+
+    await this.mailService.OrganizationRegistration(result.organization);
 
     return {
       success: true,
       message: 'Organization has been created successfully.',
-      organizationDetails: organization,
+      organizationDetails: result.organization,
+      subscriptionDetails: result.subscription,
     };
   }
 
@@ -272,6 +309,78 @@ export class OrganizationService {
     };
   }
 
+  async getOrgPlanDetails(orgId: string, role: string) {
+    const allowedRoles = ['Root', 'SuperAdmin'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException(
+        'Only Root, SuperAdmin can access plan details of the organization.',
+      );
+    }
+
+    const organizationExist =
+      await this.databaseService.organization.findUnique({
+        where: {
+          id: orgId,
+        },
+        include: {
+          subscription: true,
+        },
+      });
+
+    if (!organizationExist) {
+      throw new NotFoundException("Organization doesn't exist.");
+    }
+
+    let settingCode: string | null = null;
+
+    // Only try to decrypt if it actually exists
+    if (organizationExist.settingCodeEncrypted) {
+      const encryptionKey = this.config.get<string>('ENCRYPTION_KEY'); // or your actual key
+      if (!encryptionKey) {
+        throw new Error('ENCRYPTION_KEY is not set in environment variables');
+      }
+
+      settingCode = decrypt(
+        organizationExist.settingCodeEncrypted,
+        encryptionKey,
+      );
+    }
+
+    // Avoid sending encrypted value back to client
+    const { settingCodeEncrypted, ...safeOrg } = organizationExist;
+
+    const subscription = organizationExist.subscription;
+
+    if (!subscription || !subscription.planId) {
+      return {
+        success: true,
+        message: 'Organization has no active plan',
+        organizationDetails: { ...safeOrg, settingCode },
+        planDetails: null,
+      };
+    }
+
+    const planDetails = await this.databaseService.plan.findUnique({
+      where: {
+        id: subscription.planId,
+      },
+      include: {
+        features: true,
+      },
+    });
+
+    if (!planDetails) {
+      throw new NotFoundException('Plan not found.');
+    }
+
+    return {
+      success: true,
+      message: 'Organization details fetched successfully.',
+      organizationDetails: { ...safeOrg, settingCode },
+      planDetails,
+    };
+  }
+
   async deleteOrganization(orgId, role: string) {
     const allowedRoles = ['Root'];
     if (!allowedRoles.includes(role)) {
@@ -372,6 +481,83 @@ export class OrganizationService {
     return {
       success: true,
       settingCode,
+    };
+  }
+
+  async updateSubscription(userId, role, orgId, dto: UpdateSubscriptionDto) {
+    const allowedRoles = ['Root'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException(
+        'Only root user is allowed to change plan.',
+      );
+    }
+
+    const userExistsAndIsRoot =
+      await this.databaseService.userCredential.findFirst({
+        where: {
+          id: userId,
+          role: 'Root',
+        },
+      });
+
+    if (!userExistsAndIsRoot) {
+      throw new NotFoundException("User doesn't exists.");
+    }
+
+    const organizationExists =
+      await this.databaseService.organization.findUnique({
+        where: {
+          id: orgId,
+        },
+      });
+
+    const { planId, startsAt, endsAt } = dto;
+
+    if (new Date(startsAt) >= new Date(endsAt)) {
+      throw new BadRequestException('startsAt must be before endsAt');
+    }
+
+    const subscription = await this.databaseService.subscription.findUnique({
+      where: { orgId },
+    });
+
+    if (!subscription) {
+      throw new NotFoundException(
+        'Subscription not found for this organization',
+      );
+    }
+
+    if (!organizationExists) {
+      throw new NotFoundException("Organization doesn't exists.");
+    }
+
+    await this.databaseService.$transaction(async (tx) => {
+      const planExists = await tx.plan.findFirst({
+        where: {
+          id: planId,
+          isActive: true,
+        },
+      });
+
+      if (!planExists) {
+        throw new NotFoundException("Plan doesn't exists.");
+      }
+
+      await tx.subscription.update({
+        where: {
+          orgId,
+        },
+        data: {
+          planId,
+          startsAt,
+          endsAt,
+        },
+      });
+    });
+
+    return {
+      success: true,
+      message: 'Plan updated successfully.',
     };
   }
 }
