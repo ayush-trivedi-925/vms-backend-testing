@@ -532,15 +532,21 @@ export class OrganizationService {
       if (!planExists) {
         throw new NotFoundException("Plan doesn't exists.");
       }
-
-      await tx.subscription.update({
+      await tx.subscription.upsert({
         where: {
           orgId,
         },
-        data: {
+        update: {
           planId,
           startsAt,
           endsAt,
+        },
+        create: {
+          orgId,
+          planId,
+          startsAt,
+          endsAt,
+          status: 'ACTIVE',
         },
       });
     });
