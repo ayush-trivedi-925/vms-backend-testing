@@ -7,15 +7,20 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted
+    runs-on: [self-hosted, Linux, X64]
+
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: 🚀 Deploy Backend
+        env:
+          HOME: /home/ubuntu
         run: |
           echo "==============================="
-          echo "🚀 Triggering backend deployment"
+          echo "🚀 Backend Deployment Started"
           echo "==============================="
-          bash ~/vms/deploy.sh
-          echo "✅ Deployment completed successfully!"
+          bash /home/ubuntu/vms/deploy.sh
+          echo "✅ Backend Deployment Completed"
