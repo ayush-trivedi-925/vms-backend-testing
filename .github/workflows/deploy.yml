@@ -1,4 +1,4 @@
-name: 🚀 Auto Deploy Backend (Self-Hosted)
+name: 🚀 Full VMS Deployment (Frontend + Backend)
 
 on:
   push:
@@ -10,17 +10,17 @@ jobs:
     runs-on: [self-hosted, Linux, X64]
 
     steps:
-      - name: 📥 Checkout repository
+      - name: 📥 Checkout Backend Repo
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: 🚀 Deploy Backend
+      - name: 🚀 Run Deployment Script
         env:
           HOME: /home/ubuntu
         run: |
           echo "==============================="
-          echo "🚀 Backend Deployment Started"
+          echo "🚀 VMS Deployment Started"
           echo "==============================="
           bash /home/ubuntu/vms/deploy.sh
-          echo "✅ Backend Deployment Completed"
+          echo "✅ VMS Deployment Finished"
