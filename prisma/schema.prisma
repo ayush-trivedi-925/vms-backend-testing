@@ -45,9 +45,9 @@ model Visit {
   reasonOfVisit ReasonOfVisit? @relation(fields: [reasonId], references: [id])
   staffId String
   staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
-  startTime DateTime @default(now())
+  startTime DateTime? 
   endTime DateTime?
-  status  MeetingStatus @default(ONGOING)
+  status  MeetingStatus @default(PENDING)
   checkInPicture  String? 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt  
@@ -229,6 +229,9 @@ model ResetTokenSystem {
 enum MeetingStatus {
   ONGOING
   COMPLETED
+  PENDING
+  REJECTED
+  ACCEPTED
 }
 
 enum AuthRoleEnum {
@@ -408,6 +411,7 @@ model Notification {
 enum NotificationType {
   VISIT_REQUEST
   SYSTEM
+  REMINDER
 }
 
 enum NotificationAction {

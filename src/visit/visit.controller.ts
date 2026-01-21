@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Put,
   Query,
@@ -120,6 +121,32 @@ export class VisitController {
     );
   }
 
+  @Post('check-status')
+  async checkMeetingStatus(
+    @Req() req,
+    @Body()
+    data: {
+      email: string;
+    },
+  ) {
+    return this.visitService.checkMeetingStatus(
+      req.systemId,
+      req.role,
+      req.orgId,
+      data.email,
+    );
+  }
+
+  @Post('resend-notification/:visitId')
+  async resendNotification(@Req() req, @Param('visitId') visitId: string) {
+    return this.visitService.resendVisitNotification(
+      req.systemId,
+      req.role,
+      req.orgId,
+      visitId,
+    );
+  }
+
   @UseInterceptors(FileInterceptor('checkOutPicture', multerConfig))
   @Post('check-out-qr/:visitId')
   async checkoutQr(
@@ -168,8 +195,24 @@ export class VisitController {
 
   @Get('details/:visitId')
   async getVisitDetails(@Req() req, @Param('visitId') visitId: string) {
-    return this.visitService.getOnGoingVisitDetails(
+    return this.visitService.getVisitDetails(req.orgId, req.role, visitId);
+  }
+
+  @Patch(':visitId/accept')
+  async acceptVisit(@Req() req, @Param('visitId') visitId: string) {
+    return this.visitService.acceptVisit(
       req.orgId,
+      req.userId,
+      req.role,
+      visitId,
+    );
+  }
+
+  @Patch(':visitId/reject')
+  async rejectVisit(@Req() req, @Param('visitId') visitId: string) {
+    return this.visitService.rejectVisit(
+      req.orgId,
+      req.userId,
       req.role,
       visitId,
     );

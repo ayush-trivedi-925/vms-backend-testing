@@ -135,16 +135,28 @@ export class MailService {
         <p><b>Department:</b> ${details.staff?.department?.name || 'Not Assigned'}</p>
         <p><b>Check-in Time:</b> ${formattedTime}</p>
        
-         ${
-           details.qrCodeBuffer
-             ? `
-       <p>Please present this QR code at the reception:</p>
-        <img src="cid:visitQrCode" alt="Visit QR Code" width="200" height="200" style="display:block;"/>
-      `
-             : ''
-         }
+        ${
+          details.qrCodeBuffer
+            ? `
+      <p>
+        Please present the QR code below at the reception kiosk to check out.
+        If you wish to print your visitor badge (which includes your visit details and QR code),
+        select the <b>“Check Status”</b> option on the kiosk, enter your registered email address,
+        and click <b>Print</b>.
+      </p>
+      <img
+        src="cid:visitQrCode"
+        alt="Visit QR Code"
+        width="200"
+        height="200"
+        style="display:block;"
+      />
+    `
+            : ''
+        }
 
-        <p>Thank you</p>
+<p>Thank you.</p>
+
         <p>${details.organization?.name || 'Our Company'} Reception Team</p>
       `,
       attachments: attachments,
@@ -366,6 +378,53 @@ export class MailService {
 
       <p>Best regards,<br/>
       <b>SegueVisit Visitor Management Team</b></p>
+    `,
+    };
+
+    await this.transporter.sendMail(mailOptions);
+  }
+
+  async VisitRejectToVisitor(details: any) {
+    const formattedTime = this.formatDate(details.createdAt);
+
+    const mailOptions = {
+      from: '"Reception Team" <noreply@yourapp.com>',
+      to: details.email,
+      subject: `Visit Request Update – ${details.organization?.name}`,
+      html: `
+      <div style="font-family: Arial, sans-serif; color: #333;">
+        <p>Dear ${details.fullName || 'Visitor'},</p>
+
+        <p>
+          Thank you for your interest in visiting <b>${details.organization?.name || 'our organization'}</b>.
+          After careful review, we regret to inform you that your visit request scheduled for
+          <b>${formattedTime}</b> has been <b>declined</b>.
+        </p>
+
+        <p><b>Visit Details:</b></p>
+        <ul>
+          <li><b>Host Name:</b> ${details.staff?.name}</li>
+          <li><b>Host Email:</b> ${details.staff?.email}</li>
+          <li><b>Designation:</b> ${details.staff?.designation || 'N/A'}</li>
+          <li><b>Department:</b> ${details.staff?.department?.name || 'Not Assigned'}</li>
+          <li><b>Request Time:</b> ${formattedTime}</li>
+        </ul>
+
+        <p>
+          This decision may be due to scheduling constraints or internal policies.
+          We sincerely apologize for any inconvenience this may cause.
+        </p>
+
+        <p>
+          You are welcome to submit a new visit request.
+          If you have any questions, please feel free to reach out to the host directly.
+        </p>
+
+        <p>
+          Kind regards,<br />
+          <b>${details.organization?.name || 'Our Company'} Reception Team</b>
+        </p>
+      </div>
     `,
     };
 

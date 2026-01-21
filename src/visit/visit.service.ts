@@ -12,6 +12,8 @@ import { MailService } from 'src/service/mail/mail.service';
 import * as QRCode from 'qrcode';
 import * as ExcelJS from 'exceljs';
 import * as bcrypt from 'bcrypt';
+import { NotificationsGateway } from 'src/notifications/notifications.gateway';
+import { time } from 'console';
 
 @Injectable()
 export class VisitService {
@@ -19,6 +21,7 @@ export class VisitService {
     private readonly databaseService: DatabaseService,
     private readonly mailService: MailService,
     private readonly cloudinary: CloudinaryService,
+    private readonly notificationsGateway: NotificationsGateway,
   ) {}
   async startVisit(
     orgId: string,
@@ -67,11 +70,12 @@ export class VisitService {
       where: {
         email: normalizedEmail,
         orgId: orgId,
-        status: 'ONGOING', // Assuming you have this status
+        status: { in: ['PENDING', 'ACCEPTED', 'ONGOING'] },
       },
     });
 
     if (activeVisit) {
+      console.log(activeVisit);
       throw new BadRequestException('Visitor already has an active visit.');
     }
 
@@ -96,6 +100,7 @@ export class VisitService {
         reasonId,
         staffId,
         checkInPicture: imageUrl ?? null,
+        status: 'PENDING',
       },
       include: {
         staff: {
@@ -108,29 +113,28 @@ export class VisitService {
       },
     });
 
-    let qrCodeBuffer: Buffer | null = null;
-    try {
-      // Generate QR code as buffer
-      qrCodeBuffer = await QRCode.toBuffer(startVisitDetails.id);
-    } catch (err) {
-      console.error('Failed to generate QR code', err);
-      qrCodeBuffer = null;
-    }
-    const emailDetails = {
-      ...startVisitDetails,
-      qrCodeBuffer,
-    };
+    const notification = await this.databaseService.notification.create({
+      data: {
+        orgId,
+        staffId,
+        visitId: startVisitDetails.id,
+        type: 'VISIT_REQUEST',
+        title: 'New visitor',
+        message: `${fullName} is here to see you.`,
+      },
+      include: {
+        visit: true,
+        staff: true,
+      },
+    });
 
-    try {
-      await this.mailService.VisitStartToVisitor(emailDetails);
-      await this.mailService.VisitStartToHost(emailDetails);
-    } catch (error) {
-      console.error('mail error:', error);
+    if (staffExists.userId) {
+      this.notificationsGateway.sendToStaff(staffExists.userId, notification);
     }
 
     return {
       success: true,
-      message: `${fullName} has checked in at ${startVisitDetails.startTime}`,
+      message: `${fullName} is waiting for host approval.`,
       startVisitDetails: {
         id: startVisitDetails.id,
         visitorId: startVisitDetails.id,
@@ -145,7 +149,6 @@ export class VisitService {
         reasonOfVisit: {
           name: startVisitDetails.reasonOfVisit?.name,
         },
-        checkInTime: startVisitDetails.startTime,
       },
     };
   }
@@ -187,7 +190,7 @@ export class VisitService {
         fullName: normalizedFullName,
         orgId,
         email: normalizedEmail,
-        status: 'ONGOING',
+        status: { in: ['ONGOING'] },
       },
     });
 
@@ -197,7 +200,6 @@ export class VisitService {
 
     //Only allow update if role is permitted
     if (role && !allowedRoles.includes(role)) {
-      console.log('role not permitted');
       throw new BadRequestException('You are not allowed to end this visit.');
     }
 
@@ -313,7 +315,7 @@ export class VisitService {
     };
   }
 
-  async getOnGoingVisitDetails(orgId: string, role: string, visitId: string) {
+  async getVisitDetails(orgId: string, role: string, visitId: string) {
     const allowedRoles = ['SuperAdmin', 'Admin', 'Root', 'System'];
     if (!allowedRoles.includes(role)) {
       throw new UnauthorizedException(
@@ -322,7 +324,7 @@ export class VisitService {
     }
 
     const visitExists = await this.databaseService.visit.findUnique({
-      where: { id: visitId, status: 'ONGOING' },
+      where: { id: visitId },
       include: {
         staff: {
           include: {
@@ -341,9 +343,31 @@ export class VisitService {
       throw new UnauthorizedException('Unauthorized attempt.');
     }
 
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    const notificationDetails =
+      await this.databaseService.notification.findFirst({
+        where: {
+          visitId,
+          orgId,
+          createdAt: {
+            gte: startOfToday,
+            lte: endOfToday,
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
     return {
       success: 'true',
       visitDetails: visitExists,
+      notificationDetails,
     };
   }
 
@@ -670,7 +694,7 @@ export class VisitService {
         reason: v.reasonOfVisit?.name ?? '—',
         staff: v.staff.name,
         department: v.staff.department?.name ?? '—',
-        startTime: v.startTime.toISOString(),
+        startTime: v.startTime?.toISOString() ?? '',
         endTime: v.endTime?.toISOString() ?? '',
       });
     });
@@ -678,5 +702,348 @@ export class VisitService {
     // RETURN AS BUFFER //
     const buffer = await workbook.xlsx.writeBuffer();
     return buffer;
+  }
+
+  async acceptVisit(orgId: string, userId: string, role: string, visitId) {
+    const allowedRoles = ['SuperAdmin', 'Admin', 'Staff'];
+
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException('Unauthorized role.');
+    }
+
+    const organizationExists =
+      await this.databaseService.organization.findUnique({
+        where: {
+          id: orgId,
+        },
+      });
+
+    if (!organizationExists) {
+      throw new NotFoundException("Organization doesn't exists.");
+    }
+
+    const staffExists = await this.databaseService.staff.findUnique({
+      where: {
+        userId,
+      },
+    });
+
+    if (!staffExists) {
+      throw new NotFoundException("Staff doesn't exists.");
+    }
+
+    const visitExists = await this.databaseService.visit.findFirst({
+      where: {
+        id: visitId,
+        status: 'PENDING',
+      },
+      include: {
+        staff: {
+          include: {
+            department: true,
+          },
+        },
+        organization: true,
+        reasonOfVisit: true,
+      },
+    });
+
+    if (!visitExists || visitExists.orgId !== orgId) {
+      throw new NotFoundException('No such visit found.');
+    }
+
+    if (visitExists.staffId !== staffExists.id) {
+      throw new UnauthorizedException('Unauthorised update attempt.');
+    }
+
+    await this.databaseService.$transaction([
+      this.databaseService.visit.update({
+        where: {
+          id: visitId,
+        },
+        data: {
+          status: 'ONGOING',
+          startTime: new Date(),
+        },
+      }),
+
+      this.databaseService.notification.updateMany({
+        where: { visitId },
+        data: { action: 'ACCEPTED', isRead: true },
+      }),
+    ]);
+
+    let qrCodeBuffer: Buffer | null = null;
+    try {
+      // Generate QR code as buffer
+      qrCodeBuffer = await QRCode.toBuffer(visitExists.id);
+    } catch (err) {
+      console.error('Failed to generate QR code', err);
+      qrCodeBuffer = null;
+    }
+    const emailDetails = {
+      ...visitExists,
+      qrCodeBuffer,
+    };
+
+    try {
+      await this.mailService.VisitStartToVisitor(emailDetails);
+      await this.mailService.VisitStartToHost(emailDetails);
+    } catch (error) {
+      console.error('mail error:', error);
+    }
+
+    return {
+      success: true,
+      message: 'Host has accepted the visit request.',
+    };
+  }
+
+  async rejectVisit(orgId: string, userId: string, role: string, visitId) {
+    const allowedRoles = ['SuperAdmin', 'Admin', 'Staff'];
+
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException('Unauthorized role.');
+    }
+
+    const organizationExists =
+      await this.databaseService.organization.findUnique({
+        where: {
+          id: orgId,
+        },
+      });
+
+    if (!organizationExists) {
+      throw new NotFoundException("Organization doesn't exists.");
+    }
+
+    const staffExists = await this.databaseService.staff.findUnique({
+      where: {
+        userId,
+      },
+    });
+
+    if (!staffExists) {
+      throw new NotFoundException("Staff doesn't exists.");
+    }
+
+    const visitExists = await this.databaseService.visit.findFirst({
+      where: {
+        id: visitId,
+        status: 'PENDING',
+      },
+      include: {
+        staff: {
+          include: {
+            department: true,
+          },
+        },
+
+        reasonOfVisit: true,
+        organization: true,
+      },
+    });
+
+    if (!visitExists || visitExists.orgId !== orgId) {
+      throw new NotFoundException('No such visit found.');
+    }
+
+    if (visitExists.staffId !== staffExists.id) {
+      throw new UnauthorizedException('Unauthorised update attempt.');
+    }
+
+    await this.databaseService.$transaction([
+      this.databaseService.visit.update({
+        where: {
+          id: visitId,
+        },
+        data: {
+          status: 'REJECTED',
+        },
+      }),
+
+      this.databaseService.notification.updateMany({
+        where: { visitId },
+        data: { action: 'REJECTED', isRead: true },
+      }),
+    ]);
+    try {
+      await this.mailService.VisitRejectToVisitor(visitExists);
+    } catch (error) {}
+
+    return {
+      success: true,
+      message: 'Host has rejected the visit request.',
+    };
+  }
+
+  async checkMeetingStatus(
+    systemId: string,
+    role: string,
+    orgId: string,
+    email: string,
+  ) {
+    if (role !== 'System') {
+      throw new UnauthorizedException('Invalid role.');
+    }
+
+    const systemAccountExists =
+      await this.databaseService.systemCredential.findUnique({
+        where: { id: systemId },
+      });
+
+    if (!systemAccountExists) {
+      throw new NotFoundException('Invalid credentials.');
+    }
+
+    if (!orgId || !email) {
+      throw new BadRequestException('Invalid visit details.');
+    }
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    const visit = await this.databaseService.visit.findFirst({
+      where: {
+        email,
+        orgId,
+        createdAt: {
+          gte: startOfToday,
+          lte: endOfToday,
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        staff: true,
+        reasonOfVisit: true,
+      },
+    });
+
+    if (!visit) {
+      throw new NotFoundException('Visit not found.');
+    }
+
+    switch (visit.status) {
+      case 'PENDING':
+        return {
+          success: true,
+          status: 'PENDING',
+          visitId: visit.id,
+        };
+
+      case 'ONGOING':
+        return {
+          success: true,
+          status: 'ONGOING',
+          visitId: visit.id,
+        };
+
+      case 'COMPLETED':
+        return {
+          success: true,
+          status: 'COMPLETED',
+          visitId: visit.id,
+        };
+
+      case 'REJECTED':
+        return {
+          success: true,
+          status: 'REJECTED',
+          visitId: visit.id,
+        };
+
+      default:
+        throw new BadRequestException('Invalid visit status.');
+    }
+  }
+
+  async resendVisitNotification(
+    systemId: string,
+    role: string,
+    orgId: string,
+    visitId: string,
+  ) {
+    // Authorize system
+    if (role !== 'System') {
+      throw new UnauthorizedException('Invalid role.');
+    }
+
+    const systemAccount =
+      await this.databaseService.systemCredential.findUnique({
+        where: { id: systemId },
+      });
+
+    if (!systemAccount) {
+      throw new NotFoundException('Invalid credentials.');
+    }
+
+    // Fetch visit
+    const visit = await this.databaseService.visit.findUnique({
+      where: { id: visitId },
+      include: {
+        staff: true,
+      },
+    });
+
+    if (!visit || visit.orgId !== orgId) {
+      throw new NotFoundException('Visit not found.');
+    }
+
+    // Ensure visit is pending
+    if (visit.status !== 'PENDING') {
+      throw new BadRequestException(
+        'Notification can only be resent for pending visits.',
+      );
+    }
+
+    const lastNotification = await this.databaseService.notification.findFirst({
+      where: {
+        visitId: visit.id,
+        type: { in: ['VISIT_REQUEST', 'REMINDER'] },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (
+      lastNotification &&
+      Date.now() - lastNotification.createdAt.getTime() < 5 * 60 * 1000
+    ) {
+      throw new BadRequestException(
+        'Please wait before resending notification.',
+      );
+    }
+
+    // Create notification
+    const notification = await this.databaseService.notification.create({
+      data: {
+        orgId,
+        staffId: visit.staffId,
+        visitId: visit.id,
+        type: 'REMINDER',
+        title: 'Visitor waiting',
+        message: `${visit.fullName} is waiting for your approval.`,
+      },
+      include: {
+        staff: true,
+      },
+    });
+
+    // Realtime push
+    if (notification.staff?.userId) {
+      this.notificationsGateway.sendToStaff(
+        notification.staff.userId,
+        notification,
+      );
+    }
+
+    // Response
+    return {
+      success: true,
+      message: 'Notification resent successfully.',
+      notificationDetails: notification,
+    };
   }
 }

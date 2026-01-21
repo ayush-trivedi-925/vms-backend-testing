@@ -18,6 +18,7 @@ import { TeamController } from './team/team.controller';
 import { TeamService } from './team/team.service';
 import { TeamModule } from './team/team.module';
 import { PlanModule } from './plan/plan.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { PlanModule } from './plan/plan.module';
     AttendanceModule,
     TeamModule,
     PlanModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService, CloudinaryService],
