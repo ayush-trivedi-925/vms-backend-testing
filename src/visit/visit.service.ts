@@ -756,22 +756,34 @@ export class VisitService {
       throw new UnauthorizedException('Unauthorised update attempt.');
     }
 
-    await this.databaseService.$transaction([
-      this.databaseService.visit.update({
-        where: {
-          id: visitId,
-        },
+    const updatedVisit = await this.databaseService.$transaction(async (tx) => {
+      const visit = await tx.visit.update({
+        where: { id: visitId },
         data: {
           status: 'ONGOING',
           startTime: new Date(),
         },
-      }),
+        include: {
+          staff: {
+            include: {
+              department: true,
+            },
+          },
+          reasonOfVisit: true,
+          organization: true,
+        },
+      });
 
-      this.databaseService.notification.updateMany({
+      await tx.notification.updateMany({
         where: { visitId },
-        data: { action: 'ACCEPTED', isRead: true },
-      }),
-    ]);
+        data: {
+          action: 'ACCEPTED',
+          isRead: true,
+        },
+      });
+
+      return visit; // return updated visit
+    });
 
     let qrCodeBuffer: Buffer | null = null;
     try {
@@ -782,7 +794,7 @@ export class VisitService {
       qrCodeBuffer = null;
     }
     const emailDetails = {
-      ...visitExists,
+      ...updatedVisit,
       qrCodeBuffer,
     };
 

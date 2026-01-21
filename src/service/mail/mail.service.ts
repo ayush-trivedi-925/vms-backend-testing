@@ -155,7 +155,7 @@ export class MailService {
             : ''
         }
 
-<p>Thank you.</p>
+        <p>Thank you.</p>
 
         <p>${details.organization?.name || 'Our Company'} Reception Team</p>
       `,
