@@ -556,4 +556,56 @@ export class OrganizationService {
       message: 'Plan updated successfully.',
     };
   }
+
+  async getMyFeatures(orgId: string, role: string, userId: string) {
+    const allowedRoles = ['SuperAdmin', 'Admin', 'Staff', 'System'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException('Invalid role.');
+    }
+
+    const organizationExists =
+      await this.databaseService.organization.findUnique({
+        where: {
+          id: orgId,
+        },
+        include: {
+          subscription: {
+            include: {
+              plan: {
+                include: { features: true },
+              },
+            },
+          },
+        },
+      });
+
+    if (!organizationExists) {
+      throw new NotFoundException('Invalid organization details.');
+    }
+
+    const userExists = await this.databaseService.userCredential.findFirst({
+      where: {
+        id: userId,
+        orgId,
+      },
+    });
+
+    if (!userExists) {
+      throw new NotFoundException("User doesn't exists.");
+    }
+
+    if (!organizationExists?.subscription?.plan) {
+      return { features: {} };
+    }
+
+    const features = organizationExists.subscription.plan.features.reduce(
+      (acc, f) => {
+        acc[f.feature] = true;
+        return acc;
+      },
+      {} as Record<string, boolean>,
+    );
+
+    return { features };
+  }
 }

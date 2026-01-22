@@ -56,6 +56,15 @@ export class OrganizationController {
     return this.organizationService.getAllOrganization(req.role);
   }
 
+  @Get('me/features')
+  async getMyFeatures(@Req() req) {
+    return this.organizationService.getMyFeatures(
+      req.orgId,
+      req.role,
+      req.userId,
+    );
+  }
+
   @Get('plan/:orgId')
   async getOrgPlanDetails(@Param('orgId') orgId: string, @Req() req) {
     return this.organizationService.getOrgPlanDetails(orgId, req.role);
