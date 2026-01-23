@@ -6,8 +6,9 @@ import {
 import { Server, Socket } from 'socket.io';
 
 @WebSocketGateway({
+  namespace: '/notifications',
   cors: {
-    origin: 'http://localhost:5173/',
+    origin: ['https://vms.seguevisit.com'],
   },
 })
 export class NotificationsGateway implements OnGatewayConnection {
@@ -16,6 +17,7 @@ export class NotificationsGateway implements OnGatewayConnection {
 
   handleConnection(socket: Socket) {
     const userId = socket.handshake.auth.userId;
+    console.log('Socket connected:', socket.id, 'room:', userId);
     if (!userId) {
       socket.disconnect();
       return;

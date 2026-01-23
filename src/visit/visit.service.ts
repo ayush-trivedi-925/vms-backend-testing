@@ -11,9 +11,7 @@ import { CloudinaryService } from 'src/media/cloudinary.service';
 import { MailService } from 'src/service/mail/mail.service';
 import * as QRCode from 'qrcode';
 import * as ExcelJS from 'exceljs';
-import * as bcrypt from 'bcrypt';
 import { NotificationsGateway } from 'src/notifications/notifications.gateway';
-import { time } from 'console';
 
 @Injectable()
 export class VisitService {
@@ -129,6 +127,12 @@ export class VisitService {
     });
 
     if (staffExists.userId) {
+      console.log(
+        'Emitting notification to room:',
+        staffExists.userId,
+        'notification id:',
+        notification.id,
+      );
       this.notificationsGateway.sendToStaff(staffExists.userId, notification);
     }
 
