@@ -37,6 +37,15 @@ export class OrganizationController {
     );
   }
 
+  @Get('me/features')
+  async getMyFeatures(@Req() req) {
+    return this.organizationService.getMyFeatures(
+      req.orgId,
+      req.role,
+      req.userId,
+    );
+  }
+
   @Get('settingCode')
   async getSettingCode(@Req() req) {
     return this.organizationService.getSettingsCode(
@@ -51,28 +60,9 @@ export class OrganizationController {
     return this.organizationService.getSystemAccountLimit(req.orgId, req.role);
   }
 
-  @Get('')
-  async getAllOrganizations(@Req() req) {
-    return this.organizationService.getAllOrganization(req.role);
-  }
-
-  @Get('me/features')
-  async getMyFeatures(@Req() req) {
-    return this.organizationService.getMyFeatures(
-      req.orgId,
-      req.role,
-      req.userId,
-    );
-  }
-
   @Get('plan/:orgId')
   async getOrgPlanDetails(@Param('orgId') orgId: string, @Req() req) {
     return this.organizationService.getOrgPlanDetails(orgId, req.role);
-  }
-
-  @Get(':orgId')
-  async getOrganizationDetails(@Param('orgId') orgId: string, @Req() req) {
-    return this.organizationService.getOrganizationDetails(orgId, req.role);
   }
 
   @UseInterceptors(FileInterceptor('logo', multerConfig))
@@ -109,5 +99,15 @@ export class OrganizationController {
   @Delete(':orgId')
   async deleteOrganization(@Param('orgId') orgId: string, @Req() req) {
     return this.organizationService.deleteOrganization(orgId, req.role);
+  }
+
+  @Get('')
+  async getAllOrganizations(@Req() req) {
+    return this.organizationService.getAllOrganization(req.role);
+  }
+
+  @Get(':orgId')
+  async getOrganizationDetails(@Param('orgId') orgId: string, @Req() req) {
+    return this.organizationService.getOrganizationDetails(orgId, req.role);
   }
 }
