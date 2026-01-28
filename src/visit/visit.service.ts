@@ -136,6 +136,9 @@ export class VisitService {
       this.notificationsGateway.sendToStaff(staffExists.userId, notification);
     }
 
+    await this.mailService.VisitRequestToHost(startVisitDetails);
+    await this.mailService.VisitRequestToVisitor(startVisitDetails);
+
     return {
       success: true,
       message: `${fullName} is waiting for host approval.`,

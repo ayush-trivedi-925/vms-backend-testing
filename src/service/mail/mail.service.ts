@@ -430,4 +430,80 @@ export class MailService {
 
     await this.transporter.sendMail(mailOptions);
   }
+
+  async VisitRequestToHost(details: any) {
+    const mailOptions = {
+      from: '"Visit Request Notification" <noreply@yourapp.com>',
+      to: details.staff?.email,
+      subject: `Visit Request from ${details.fullName} - ${details.organization?.name}`,
+      html: `
+      <p>Dear ${details.staff?.name || 'Staff'},</p>
+
+      <p>You have received a new visitor request. The details are as follows:</p>
+
+      <p><b>Visitor Name:</b> ${details.fullName}</p>
+      <p><b>Email:</b> ${details.email}</p>
+      <p><b>Organization:</b> ${details.visitorOrganization}</p>
+      <p><b>Purpose of Visit:</b> ${details.reasonOfVisit?.name}</p>
+      <p><b>Date and Time of Request:</b> ${this.formatDate(details.createdAt)}</p>
+
+      <p>
+        Please review the visit request and choose to accept or reject it using the link below:
+      </p>
+
+      <p style="margin: 20px 0;">
+        <a
+          href="https://vms.seguevisit.com/notifications"
+          style="
+            background-color: #2563eb;
+            color: #ffffff;
+            padding: 10px 16px;
+            text-decoration: none;
+            border-radius: 4px;
+            display: inline-block;
+          "
+        >
+          Review Visit Request
+        </a>
+      </p>
+
+      <p>Thank you.</p>
+
+      <p>${details.organization?.name || 'Our Company'} Security Team</p>
+    `,
+    };
+
+    await this.transporter.sendMail(mailOptions);
+  }
+
+  async VisitRequestToVisitor(details: any) {
+    const formattedTime = this.formatDate(details.createdAt);
+
+    const mailOptions = {
+      from: '"Visit Request Submitted" <noreply@yourapp.com>',
+      to: details.email,
+      subject: `Your visit request to ${details.organization?.name} has been sent`,
+      html: `
+      <p>Dear ${details.fullName},</p>
+
+      <p>Your visit request has been successfully submitted. Here are the details:</p>
+
+      <p><b>Host Name:</b> ${details.staff?.name}</p>
+      <p><b>Email:</b> ${details.staff?.email}</p>
+      <p><b>Designation:</b> ${details.staff?.designation || 'N/A'}</p>
+      <p><b>Department:</b> ${details.staff?.department?.name || 'Not Assigned'}</p>
+      <p><b>Date and Time of Request:</b> ${this.formatDate(details.createdAt)}</p>
+
+      <p>
+        Once your host approves the visit, you will receive another email with further instructions.
+      </p>
+
+      <p>Thank you for your interest.</p>
+
+      <p>${details.organization?.name || 'Our Company'} Reception Team</p>
+    `,
+    };
+
+    await this.transporter.sendMail(mailOptions);
+  }
 }
