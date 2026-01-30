@@ -821,7 +821,7 @@ export class VisitService {
     const emailDetails = {
       ...updatedVisit,
       qrCodeBuffer,
-      reason: reason ?? null,
+      reason: dto.reason || null,
     };
 
     try {
