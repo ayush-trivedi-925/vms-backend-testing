@@ -13,7 +13,7 @@ import {
 } from '@prisma/client';
 
 import { ScanAttendanceDto, AttendanceActionDto } from '../dto/attendance.dto';
-import * as ExcelJS from 'exceljs';
+// import * as ExcelJS from 'exceljs';
 
 type AttendanceState =
   | 'NO_SESSION_TODAY'
@@ -703,103 +703,103 @@ export class AttendanceService {
     });
   }
 
-  async exportLastMonthAttendance(
-    orgId: string,
-    userId: string,
-    role: string,
-    staffId: string,
-  ) {
-    const allowedRoles = ['SuperAdmin', 'Admin'];
-    if (!allowedRoles.includes(role)) {
-      throw new UnauthorizedException('Invalid role.');
-    }
+  // async exportLastMonthAttendance(
+  //   orgId: string,
+  //   userId: string,
+  //   role: string,
+  //   staffId: string,
+  // ) {
+  //   const allowedRoles = ['SuperAdmin', 'Admin'];
+  //   if (!allowedRoles.includes(role)) {
+  //     throw new UnauthorizedException('Invalid role.');
+  //   }
 
-    const { start, end } = this.getCurrentMonthRange();
+  //   const { start, end } = this.getCurrentMonthRange();
 
-    const organizationExists =
-      await this.databaseService.organization.findUnique({
-        where: {
-          id: orgId,
-        },
-      });
+  //   const organizationExists =
+  //     await this.databaseService.organization.findUnique({
+  //       where: {
+  //         id: orgId,
+  //       },
+  //     });
 
-    if (!organizationExists) {
-      throw new BadRequestException('Invalid organization id.');
-    }
+  //   if (!organizationExists) {
+  //     throw new BadRequestException('Invalid organization id.');
+  //   }
 
-    const userExists = await this.databaseService.userCredential.findUnique({
-      where: {
-        id: userId,
-      },
-    });
+  //   const userExists = await this.databaseService.userCredential.findUnique({
+  //     where: {
+  //       id: userId,
+  //     },
+  //   });
 
-    if (!userExists || userExists.orgId !== orgId) {
-      throw new BadRequestException('Invalid user.');
-    }
+  //   if (!userExists || userExists.orgId !== orgId) {
+  //     throw new BadRequestException('Invalid user.');
+  //   }
 
-    const staffExists = await this.databaseService.staff.findUnique({
-      where: {
-        id: staffId,
-      },
-    });
+  //   const staffExists = await this.databaseService.staff.findUnique({
+  //     where: {
+  //       id: staffId,
+  //     },
+  //   });
 
-    if (!staffExists) {
-      throw new NotFoundException('Invalid staff.');
-    }
+  //   if (!staffExists) {
+  //     throw new NotFoundException('Invalid staff.');
+  //   }
 
-    const sessions = await this.databaseService.attendanceSession.findMany({
-      where: {
-        orgId,
-        staffId,
-        status: 'CLOSED',
-        date: {
-          gte: start,
-          lte: end,
-        },
-      },
-      orderBy: { date: 'asc' },
-    });
+  //   const sessions = await this.databaseService.attendanceSession.findMany({
+  //     where: {
+  //       orgId,
+  //       staffId,
+  //       status: 'CLOSED',
+  //       date: {
+  //         gte: start,
+  //         lte: end,
+  //       },
+  //     },
+  //     orderBy: { date: 'asc' },
+  //   });
 
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet('Last Month Attendance');
+  //   const workbook = new ExcelJS.Workbook();
+  //   const sheet = workbook.addWorksheet('Last Month Attendance');
 
-    sheet.columns = [
-      { header: 'Closure Type', key: 'closureType', width: 15 },
-      { header: 'Is Late Closure', key: 'isLateClosure', width: 15 },
-      { header: 'Late Punch-out Reason', key: 'lateReason', width: 30 },
-      {
-        header: 'Late Punch-out Recorded At',
-        key: 'lateRecordedAt',
-        width: 25,
-      },
-      { header: 'First Punch-in Time', key: 'firstPunchIn', width: 25 },
-      { header: 'Last Punch-out Time', key: 'lastPunchOut', width: 25 },
-      { header: 'Total Work Duration', key: 'workHours', width: 20 },
+  //   sheet.columns = [
+  //     { header: 'Closure Type', key: 'closureType', width: 15 },
+  //     { header: 'Is Late Closure', key: 'isLateClosure', width: 15 },
+  //     { header: 'Late Punch-out Reason', key: 'lateReason', width: 30 },
+  //     {
+  //       header: 'Late Punch-out Recorded At',
+  //       key: 'lateRecordedAt',
+  //       width: 25,
+  //     },
+  //     { header: 'First Punch-in Time', key: 'firstPunchIn', width: 25 },
+  //     { header: 'Last Punch-out Time', key: 'lastPunchOut', width: 25 },
+  //     { header: 'Total Work Duration', key: 'workHours', width: 20 },
 
-      { header: 'Total Break Minutes', key: 'breakMinutes', width: 22 },
-    ];
+  //     { header: 'Total Break Minutes', key: 'breakMinutes', width: 22 },
+  //   ];
 
-    sessions.forEach((s) => {
-      sheet.addRow({
-        closureType: s.closureType ?? '—',
-        isLateClosure: s.isLateClosure ? 'Yes' : 'No',
-        lateReason: s.latePunchOutReason ?? '',
-        lateRecordedAt: this.toLocalDate(s.latePunchOutRecordedAt),
-        firstPunchIn: this.toLocalDate(s.firstPunchInAt),
-        lastPunchOut: this.toLocalDate(s.lastPunchOutAt),
-        workHours: this.formatWorkDuration(s.totalWorkSeconds),
+  //   sessions.forEach((s) => {
+  //     sheet.addRow({
+  //       closureType: s.closureType ?? '—',
+  //       isLateClosure: s.isLateClosure ? 'Yes' : 'No',
+  //       lateReason: s.latePunchOutReason ?? '',
+  //       lateRecordedAt: this.toLocalDate(s.latePunchOutRecordedAt),
+  //       firstPunchIn: this.toLocalDate(s.firstPunchInAt),
+  //       lastPunchOut: this.toLocalDate(s.lastPunchOutAt),
+  //       workHours: this.formatWorkDuration(s.totalWorkSeconds),
 
-        breakMinutes: this.formatWorkDuration(s.totalBreakSeconds),
-      });
-    });
+  //       breakMinutes: this.formatWorkDuration(s.totalBreakSeconds),
+  //     });
+  //   });
 
-    // Header styling
-    sheet.getRow(1).font = { bold: true };
-    sheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
-    sheet.getColumn('lateRecordedAt').numFmt = 'dd-mmm-yyyy hh:mm AM/PM';
-    sheet.getColumn('firstPunchIn').numFmt = 'dd-mmm-yyyy hh:mm AM/PM';
-    sheet.getColumn('lastPunchOut').numFmt = 'dd-mmm-yyyy hh:mm AM/PM';
+  //   // Header styling
+  //   sheet.getRow(1).font = { bold: true };
+  //   sheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+  //   sheet.getColumn('lateRecordedAt').numFmt = 'dd-mmm-yyyy hh:mm AM/PM';
+  //   sheet.getColumn('firstPunchIn').numFmt = 'dd-mmm-yyyy hh:mm AM/PM';
+  //   sheet.getColumn('lastPunchOut').numFmt = 'dd-mmm-yyyy hh:mm AM/PM';
 
-    return { workbook, employeeCode: staffExists.employeeCode };
-  }
+  //   return { workbook, employeeCode: staffExists.employeeCode };
+  // }
 }

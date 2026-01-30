@@ -1,6 +1,8 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -12,6 +14,10 @@ import { MailService } from 'src/service/mail/mail.service';
 import * as QRCode from 'qrcode';
 import * as ExcelJS from 'exceljs';
 import { NotificationsGateway } from 'src/notifications/notifications.gateway';
+import {
+  AcceptVisitDto,
+  RejectVisitDto,
+} from 'src/dto/accept-reject-visit.dto';
 
 @Injectable()
 export class VisitService {
@@ -711,27 +717,25 @@ export class VisitService {
     return buffer;
   }
 
-  async acceptVisit(orgId: string, userId: string, role: string, visitId) {
+  async acceptVisit(
+    orgId: string,
+    userId: string,
+    role: string,
+    visitId: string,
+    dto: AcceptVisitDto,
+  ) {
     const allowedRoles = ['SuperAdmin', 'Admin', 'Staff'];
 
     if (!allowedRoles.includes(role)) {
       throw new UnauthorizedException('Unauthorized role.');
     }
 
-    const organizationExists =
-      await this.databaseService.organization.findUnique({
-        where: {
-          id: orgId,
-        },
-      });
+    const reason = dto?.reason ?? null;
 
-    if (!organizationExists) {
-      throw new NotFoundException("Organization doesn't exists.");
-    }
-
-    const staffExists = await this.databaseService.staff.findUnique({
+    const staffExists = await this.databaseService.staff.findFirst({
       where: {
         userId,
+        orgId,
       },
     });
 
@@ -764,11 +768,29 @@ export class VisitService {
     }
 
     const updatedVisit = await this.databaseService.$transaction(async (tx) => {
-      const visit = await tx.visit.update({
-        where: { id: visitId },
+      const updated = await tx.visit.updateMany({
+        where: { id: visitId, status: 'PENDING' },
         data: {
           status: 'ONGOING',
           startTime: new Date(),
+        },
+      });
+
+      if (updated.count === 0) {
+        throw new ConflictException('Visit already processed or invalid.');
+      }
+
+      await tx.notification.updateMany({
+        where: { visitId },
+        data: {
+          action: 'ACCEPTED',
+          isRead: true,
+        },
+      });
+
+      const visit = await tx.visit.findUnique({
+        where: {
+          id: visitId,
         },
         include: {
           staff: {
@@ -781,13 +803,9 @@ export class VisitService {
         },
       });
 
-      await tx.notification.updateMany({
-        where: { visitId },
-        data: {
-          action: 'ACCEPTED',
-          isRead: true,
-        },
-      });
+      if (!visit) {
+        throw new InternalServerErrorException('Visit updated but not found.');
+      }
 
       return visit; // return updated visit
     });
@@ -795,7 +813,7 @@ export class VisitService {
     let qrCodeBuffer: Buffer | null = null;
     try {
       // Generate QR code as buffer
-      qrCodeBuffer = await QRCode.toBuffer(visitExists.id);
+      qrCodeBuffer = await QRCode.toBuffer(updatedVisit.id);
     } catch (err) {
       console.error('Failed to generate QR code', err);
       qrCodeBuffer = null;
@@ -803,6 +821,7 @@ export class VisitService {
     const emailDetails = {
       ...updatedVisit,
       qrCodeBuffer,
+      reason: reason ?? null,
     };
 
     try {
@@ -818,27 +837,24 @@ export class VisitService {
     };
   }
 
-  async rejectVisit(orgId: string, userId: string, role: string, visitId) {
+  async rejectVisit(
+    orgId: string,
+    userId: string,
+    role: string,
+    visitId: string,
+    dto: RejectVisitDto,
+  ) {
     const allowedRoles = ['SuperAdmin', 'Admin', 'Staff'];
+
+    const { reason } = dto;
 
     if (!allowedRoles.includes(role)) {
       throw new UnauthorizedException('Unauthorized role.');
     }
-
-    const organizationExists =
-      await this.databaseService.organization.findUnique({
-        where: {
-          id: orgId,
-        },
-      });
-
-    if (!organizationExists) {
-      throw new NotFoundException("Organization doesn't exists.");
-    }
-
-    const staffExists = await this.databaseService.staff.findUnique({
+    const staffExists = await this.databaseService.staff.findFirst({
       where: {
         userId,
+        orgId,
       },
     });
 
@@ -871,24 +887,53 @@ export class VisitService {
       throw new UnauthorizedException('Unauthorised update attempt.');
     }
 
-    await this.databaseService.$transaction([
-      this.databaseService.visit.update({
+    const updatedVisit = await this.databaseService.$transaction(async (tx) => {
+      const updated = await tx.visit.updateMany({
         where: {
           id: visitId,
+          status: 'PENDING',
         },
         data: {
           status: 'REJECTED',
         },
-      }),
+      });
 
-      this.databaseService.notification.updateMany({
+      if (updated.count === 0) {
+        throw new ConflictException('Visit already processed or invalid.');
+      }
+
+      await tx.notification.updateMany({
         where: { visitId },
         data: { action: 'REJECTED', isRead: true },
-      }),
-    ]);
+      });
+
+      const visit = await tx.visit.findUnique({
+        where: {
+          id: visitId,
+        },
+        include: {
+          staff: {
+            include: {
+              department: true,
+            },
+          },
+          reasonOfVisit: true,
+          organization: true,
+        },
+      });
+
+      if (!visit) {
+        throw new InternalServerErrorException('Visit updated but not found.');
+      }
+      return visit;
+    });
+
+    const emailDetails = { ...updatedVisit, reason: reason ?? null };
     try {
-      await this.mailService.VisitRejectToVisitor(visitExists);
-    } catch (error) {}
+      await this.mailService.VisitRejectToVisitor(emailDetails);
+    } catch (error) {
+      console.error('Reject mail error:', error);
+    }
 
     return {
       success: true,

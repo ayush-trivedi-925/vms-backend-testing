@@ -42,7 +42,11 @@ export class NotificationsService {
       include: {
         visit: {
           include: {
-            staff: true,
+            staff: {
+              include: {
+                department: true,
+              },
+            },
             reasonOfVisit: true,
           },
         },
@@ -89,7 +93,11 @@ export class NotificationsService {
         include: {
           visit: {
             include: {
-              staff: true,
+              staff: {
+                include: {
+                  department: true,
+                },
+              },
               reasonOfVisit: true,
             },
           },

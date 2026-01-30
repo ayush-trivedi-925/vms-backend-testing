@@ -21,6 +21,10 @@ import { AuthGuard } from 'src/guard/auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerConfig } from 'src/service/multer/multer.config';
 import { VisitAnalyticsService } from './visit.analytics.service';
+import {
+  AcceptVisitDto,
+  RejectVisitDto,
+} from 'src/dto/accept-reject-visit.dto';
 
 @UseGuards(AuthGuard)
 @Controller('visit')
@@ -199,22 +203,34 @@ export class VisitController {
   }
 
   @Patch(':visitId/accept')
-  async acceptVisit(@Req() req, @Param('visitId') visitId: string) {
+  async acceptVisit(
+    @Req() req,
+    @Param('visitId') visitId: string,
+    @Body()
+    dto: AcceptVisitDto,
+  ) {
     return this.visitService.acceptVisit(
       req.orgId,
       req.userId,
       req.role,
       visitId,
+      dto,
     );
   }
 
   @Patch(':visitId/reject')
-  async rejectVisit(@Req() req, @Param('visitId') visitId: string) {
+  async rejectVisit(
+    @Req() req,
+    @Param('visitId') visitId: string,
+    @Body()
+    dto: RejectVisitDto,
+  ) {
     return this.visitService.rejectVisit(
       req.orgId,
       req.userId,
       req.role,
       visitId,
+      dto,
     );
   }
 }

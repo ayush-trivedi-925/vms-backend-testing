@@ -34,37 +34,37 @@ export class AttendanceController {
     );
   }
 
-  @Get('/:staffId/last-month')
-  async downloadLastMonthAttendance(
-    @Res() res: Response,
-    @Req() req: any,
-    @Param('staffId') staffId: string,
-  ) {
-    const { workbook, employeeCode } =
-      await this.attendanceService.exportLastMonthAttendance(
-        req.orgId,
-        req.userId,
-        req.role,
-        staffId,
-      );
+  // @Get('/:staffId/last-month')
+  // async downloadLastMonthAttendance(
+  //   @Res() res: Response,
+  //   @Req() req: any,
+  //   @Param('staffId') staffId: string,
+  // ) {
+  //   const { workbook, employeeCode } =
+  //     await this.attendanceService.exportLastMonthAttendance(
+  //       req.orgId,
+  //       req.userId,
+  //       req.role,
+  //       staffId,
+  //     );
 
-    const monthLabel = new Date().toLocaleString('default', {
-      month: 'short',
-      year: 'numeric',
-    });
+  //   const monthLabel = new Date().toLocaleString('default', {
+  //     month: 'short',
+  //     year: 'numeric',
+  //   });
 
-    const fileName = `${employeeCode}_Attendance_${monthLabel}.xlsx`;
+  //   const fileName = `${employeeCode}_Attendance_${monthLabel}.xlsx`;
 
-    res.setHeader(
-      'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    );
+  //   res.setHeader(
+  //     'Content-Type',
+  //     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  //   );
 
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+  //   res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
 
-    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+  //   res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
 
-    await workbook.xlsx.write(res);
-    res.end();
-  }
+  //   await workbook.xlsx.write(res);
+  //   res.end();
+  // }
 }

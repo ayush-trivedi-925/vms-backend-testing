@@ -65,6 +65,14 @@ export class MailService {
              : ''
          }
 
+         
+         ${
+           details.reason
+             ? `<p>Reminder:</p>
+        <p>${details.reason}</p>`
+             : ''
+         }
+
         <p>Please proceed to the reception to greet your visitor.</p>
         <p>Thank you</p>
         <p>${details.organization?.name || 'Our Company'} Security Team</p>
@@ -154,6 +162,26 @@ export class MailService {
     `
             : ''
         }
+           ${
+             details.reason
+               ? `
+      <div style="
+        margin: 16px 0;
+        padding: 12px 14px;
+        background-color: #fff4f4;
+        border-left: 4px solid #dc2626;
+        border-radius: 4px;
+      ">
+        <p style="margin: 0 0 6px 0; font-weight: bold; color: #7f1d1d;">
+          Message from ${details.staff?.name}:
+        </p>
+        <p style="margin: 0; color: #333;">
+          ${details.reason}
+        </p>
+      </div>
+    `
+               : ''
+           }
 
         <p>Thank you.</p>
 
@@ -410,7 +438,28 @@ export class MailService {
           <li><b>Request Time:</b> ${formattedTime}</li>
         </ul>
 
-        <p>
+    ${
+      details.reason
+        ? `
+      <div style="
+        margin: 16px 0;
+        padding: 12px 14px;
+        background-color: #fff4f4;
+        border-left: 4px solid #dc2626;
+        border-radius: 4px;
+      ">
+        <p style="margin: 0 0 6px 0; font-weight: bold; color: #7f1d1d;">
+          Message from ${details.staff?.name}:
+        </p>
+        <p style="margin: 0; color: #333;">
+          ${details.reason}
+        </p>
+      </div>
+    `
+        : ''
+    }
+
+     <p>
           This decision may be due to scheduling constraints or internal policies.
           We sincerely apologize for any inconvenience this may cause.
         </p>
