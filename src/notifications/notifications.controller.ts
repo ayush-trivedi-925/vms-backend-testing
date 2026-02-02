@@ -1,4 +1,4 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import { Controller, Delete, Get, Param, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from 'src/guard/auth.guard';
 import { NotificationsService } from './notifications.service';
 
@@ -21,6 +21,19 @@ export class NotificationsController {
       req.orgId,
       req.userId,
       req.role,
+    );
+  }
+
+  @Delete(':notificationId')
+  async deleteNotification(
+    @Req() req,
+    @Param('notificationId') notificationId: string,
+  ) {
+    return this.notificationsService.deleteNotification(
+      req.userId,
+      req.orgId,
+      req.role,
+      notificationId,
     );
   }
 }

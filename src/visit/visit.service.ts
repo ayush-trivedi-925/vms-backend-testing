@@ -772,6 +772,7 @@ export class VisitService {
         where: { id: visitId, status: 'PENDING' },
         data: {
           status: 'ONGOING',
+          remarks: reason,
           startTime: new Date(),
         },
       });
@@ -895,6 +896,7 @@ export class VisitService {
         },
         data: {
           status: 'REJECTED',
+          remarks: reason,
         },
       });
 
@@ -1108,6 +1110,54 @@ export class VisitService {
       success: true,
       message: 'Notification resent successfully.',
       notificationDetails: notification,
+    };
+  }
+
+  async getSelfVisit(userId: string, orgId: string, role: string) {
+    const allowedRoles = ['SuperAdmin', 'Admin', 'Staff'];
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException('Invalid role.');
+    }
+
+    const staffExists = await this.databaseService.staff.findFirst({
+      where: {
+        userId,
+        orgId,
+      },
+    });
+
+    if (!staffExists) {
+      throw new NotFoundException('Staff member not found.');
+    }
+
+    const visits = await this.databaseService.visit.findMany({
+      where: {
+        staffId: staffExists.id,
+        orgId,
+        status: {
+          in: ['ONGOING', 'COMPLETED'],
+        },
+        startTime: {
+          not: null, // IMPORTANT
+        },
+      },
+      include: {
+        staff: {
+          include: {
+            department: true,
+          },
+        },
+        reasonOfVisit: true,
+        organization: true,
+      },
+      orderBy: {
+        startTime: 'desc',
+      },
+    });
+
+    return {
+      success: true,
+      visits,
     };
   }
 }

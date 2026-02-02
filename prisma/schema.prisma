@@ -49,6 +49,7 @@ model Visit {
   endTime DateTime?
   status  MeetingStatus @default(PENDING)
   checkInPicture  String? 
+  remarks  String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt  
   notifications Notification[]

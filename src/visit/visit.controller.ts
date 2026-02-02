@@ -49,6 +49,11 @@ export class VisitController {
     return this.visitService.getVisitorsPerDepartment(req.orgId);
   }
 
+  @Get('selfvisits')
+  async getSelfVisits(@Req() req) {
+    return this.visitService.getSelfVisit(req.userId, req.orgId, req.role);
+  }
+
   @Get('export')
   async exportExcel(
     @Req() req,
