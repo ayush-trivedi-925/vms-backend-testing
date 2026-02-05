@@ -6,13 +6,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { DatabaseService } from 'src/database/database.service';
-import { RegisterSystemUserDto } from 'src/dto/register-system-user.dto';
+import { DatabaseService } from '../database/database.service';
+import { RegisterSystemUserDto } from '../dto/register-system-user.dto';
 import * as bcrypt from 'bcrypt';
-import { MailService } from 'src/service/mail/mail.service';
-import { ResetPasswordDto } from 'src/dto/reset-password.dto';
-import { EditSystemUserDto } from 'src/dto/edit-system-user.dto';
-import { decrypt } from 'src/utils/encryption.util';
+import { MailService } from '../service/mail/mail.service';
+import { ResetPasswordDto } from '../dto/reset-password.dto';
+import { EditSystemUserDto } from '../dto/edit-system-user.dto';
+import { decrypt } from '../utils/encryption.util';
 const otpGenerator = require('otp-generator');
 import { ConfigService } from '@nestjs/config';
 

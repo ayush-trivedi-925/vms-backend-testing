@@ -7,18 +7,15 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { DatabaseService } from 'src/database/database.service';
-import { EndVisitDto } from 'src/dto/end-visit.dto';
-import { StartVisitDto } from 'src/dto/start-visit.dto';
-import { CloudinaryService } from 'src/media/cloudinary.service';
-import { MailService } from 'src/service/mail/mail.service';
+import { DatabaseService } from '../database/database.service';
+import { EndVisitDto } from '../dto/end-visit.dto';
+import { StartVisitDto } from '../dto/start-visit.dto';
+import { CloudinaryService } from '../media/cloudinary.service';
+import { MailService } from '../service/mail/mail.service';
 import * as QRCode from 'qrcode';
 import * as ExcelJS from 'exceljs';
-import { NotificationsGateway } from 'src/notifications/notifications.gateway';
-import {
-  AcceptVisitDto,
-  RejectVisitDto,
-} from 'src/dto/accept-reject-visit.dto';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { AcceptVisitDto, RejectVisitDto } from '../dto/accept-reject-visit.dto';
 
 @Injectable()
 export class VisitService {

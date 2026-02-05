@@ -1,4 +1,4 @@
-// src/attendance/dto/attendance.dto.ts
+// ../attendance/dto/attendance.dto.ts
 import {
   IsString,
   IsISO8601,

@@ -4,8 +4,8 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { DatabaseService } from 'src/database/database.service';
-import { AddReasonDto } from 'src/dto/add-reason.dto';
+import { DatabaseService } from '../database/database.service';
+import { AddReasonDto } from '../dto/add-reason.dto';
 
 @Injectable()
 export class ReasonService {

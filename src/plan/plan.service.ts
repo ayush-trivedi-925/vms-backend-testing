@@ -5,10 +5,10 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { DatabaseService } from 'src/database/database.service';
-import { CreatePlanDto } from 'src/dto/create-plan.dto';
-import { UpdatePlanFeatureDto } from 'src/dto/update-plan-features.dto';
-import { UpdatePlanDto } from 'src/dto/update-plan.dto';
+import { DatabaseService } from '../database/database.service';
+import { CreatePlanDto } from '../dto/create-plan.dto';
+import { UpdatePlanFeatureDto } from '../dto/update-plan-features.dto';
+import { UpdatePlanDto } from '../dto/update-plan.dto';
 
 @Injectable()
 export class PlanService {

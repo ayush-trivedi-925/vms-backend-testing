@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { StaffService } from './staff.service';
-import { DatabaseService } from 'src/database/database.service';
-import { MailService } from 'src/service/mail/mail.service';
+import { DatabaseService } from '../database/database.service';
+import { MailService } from '../service/mail/mail.service';
 import {
   BadRequestException,
   NotFoundException,

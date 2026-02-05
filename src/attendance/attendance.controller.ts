@@ -1,4 +1,4 @@
-// src/attendance/attendance.controller.ts
+// ../attendance/attendance.controller.ts
 import {
   Body,
   Controller,
@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { AttendanceService } from './attendance.service';
 import { ScanAttendanceDto, AttendanceActionDto } from '../dto/attendance.dto';
-import { AuthGuard } from 'src/guard/auth.guard';
+import { AuthGuard } from '../guard/auth.guard';
 import { Response } from 'express';
 
 @UseGuards(AuthGuard)

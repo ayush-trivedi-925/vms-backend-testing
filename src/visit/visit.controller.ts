@@ -16,16 +16,13 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { VisitService } from './visit.service';
-import { StartVisitDto } from 'src/dto/start-visit.dto';
-import { EndVisitDto } from 'src/dto/end-visit.dto';
-import { AuthGuard } from 'src/guard/auth.guard';
+import { StartVisitDto } from '../dto/start-visit.dto';
+import { EndVisitDto } from '../dto/end-visit.dto';
+import { AuthGuard } from '../guard/auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { multerConfig } from 'src/service/multer/multer.config';
+import { multerConfig } from '../service/multer/multer.config';
 import { VisitAnalyticsService } from './visit.analytics.service';
-import {
-  AcceptVisitDto,
-  RejectVisitDto,
-} from 'src/dto/accept-reject-visit.dto';
+import { AcceptVisitDto, RejectVisitDto } from '../dto/accept-reject-visit.dto';
 
 @UseGuards(AuthGuard)
 @Controller('visit')

@@ -5,14 +5,14 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { DatabaseService } from 'src/database/database.service';
-import { CreateOrganizationDto } from 'src/dto/create-organization.dto';
-import { EditOrganizationDto } from 'src/dto/edit-organization.dto';
-import { CloudinaryService } from 'src/media/cloudinary.service';
-import { MailService } from 'src/service/mail/mail.service';
+import { DatabaseService } from '../database/database.service';
+import { CreateOrganizationDto } from '../dto/create-organization.dto';
+import { EditOrganizationDto } from '../dto/edit-organization.dto';
+import { CloudinaryService } from '../media/cloudinary.service';
+import { MailService } from '../service/mail/mail.service';
 import { encrypt, decrypt } from '../utils/encryption.util';
 import { ConfigService } from '@nestjs/config';
-import { UpdateSubscriptionDto } from 'src/dto/update-subscription.dto';
+import { UpdateSubscriptionDto } from '../dto/update-subscription.dto';
 
 @Injectable()
 export class OrganizationService {

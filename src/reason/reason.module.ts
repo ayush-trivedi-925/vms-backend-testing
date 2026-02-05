@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ReasonController } from './reason.controller';
 import { ReasonService } from './reason.service';
-import { DatabaseModule } from 'src/database/database.module';
+import { DatabaseModule } from '../database/database.module';
 
 @Module({
   imports: [DatabaseModule],

@@ -12,9 +12,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { StaffService } from './staff.service';
-import { AddStaffMemberDto } from 'src/dto/add-staff-member.dto';
-import { AuthGuard } from 'src/guard/auth.guard';
-import { EditStaffMemberDto } from 'src/dto/edit-staff-member.dto';
+import { AddStaffMemberDto } from '../dto/add-staff-member.dto';
+import { AuthGuard } from '../guard/auth.guard';
+import { EditStaffMemberDto } from '../dto/edit-staff-member.dto';
 
 @UseGuards(AuthGuard)
 @Controller('staff')

@@ -5,13 +5,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { DatabaseService } from 'src/database/database.service';
+import { DatabaseService } from '../database/database.service';
 
 import * as bcrypt from 'bcrypt';
 import { v4 as uuid } from 'uuid';
-import { RegisterRootDto } from 'src/dto/register-root.dto';
-import { MailService } from 'src/service/mail/mail.service';
-import { ResetPasswordDto } from 'src/dto/reset-password.dto';
+import { RegisterRootDto } from '../dto/register-root.dto';
+import { MailService } from '../service/mail/mail.service';
+import { ResetPasswordDto } from '../dto/reset-password.dto';
 const otpGenerator = require('otp-generator');
 
 @Injectable()

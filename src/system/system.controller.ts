@@ -10,10 +10,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { SystemService } from './system.service';
-import { RegisterSystemUserDto } from 'src/dto/register-system-user.dto';
-import { AuthGuard } from 'src/guard/auth.guard';
-import { ResetPasswordDto } from 'src/dto/reset-password.dto';
-import { EditSystemUserDto } from 'src/dto/edit-system-user.dto';
+import { RegisterSystemUserDto } from '../dto/register-system-user.dto';
+import { AuthGuard } from '../guard/auth.guard';
+import { ResetPasswordDto } from '../dto/reset-password.dto';
+import { EditSystemUserDto } from '../dto/edit-system-user.dto';
 
 @Controller('system')
 export class SystemController {

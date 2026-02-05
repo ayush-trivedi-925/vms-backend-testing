@@ -42,7 +42,7 @@ export class MailService {
         filename: `qr-code-${details.id}.png`,
         content: details.qrCodeBuffer,
         contentType: 'image/png',
-        cid: 'visitQrCode', // same cid value as in the html img src
+        cid: 'visitQrCode', // same cid value as in the html img ..
       });
     }
     const mailOptions = {
@@ -60,7 +60,7 @@ export class MailService {
            details.qrCodeBuffer
              ? `
         <p>QR Code for visitor check-out:</p>
-        <img src="cid:visitQrCode" alt="Visit QR Code" width="200" height="200" style="display:block;"/>
+        <img ..="cid:visitQrCode" alt="Visit QR Code" width="200" height="200" style="display:block;"/>
       `
              : ''
          }
@@ -127,7 +127,7 @@ export class MailService {
         filename: `qr-code-${details.id}.png`,
         content: details.qrCodeBuffer,
         contentType: 'image/png',
-        cid: 'visitQrCode', // same cid value as in the html img src
+        cid: 'visitQrCode', // same cid value as in the html img ..
       });
     }
 
@@ -153,7 +153,7 @@ export class MailService {
         and click <b>Print</b>.
       </p>
       <img
-        src="cid:visitQrCode"
+        ..="cid:visitQrCode"
         alt="Visit QR Code"
         width="200"
         height="200"

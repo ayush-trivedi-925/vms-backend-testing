@@ -10,9 +10,9 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { AuthGuard } from 'src/guard/auth.guard';
+import { AuthGuard } from '../guard/auth.guard';
 import { DepartmentService } from './department.service';
-import { CreateDepartmentDto } from 'src/dto/create-department.dto';
+import { CreateDepartmentDto } from '../dto/create-department.dto';
 
 @UseGuards(AuthGuard)
 @Controller('department')

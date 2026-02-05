@@ -10,11 +10,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { PlanService } from './plan.service';
-import { CreatePlanDto } from 'src/dto/create-plan.dto';
-import { AuthGuard } from 'src/guard/auth.guard';
-import { UserRoleGuard } from 'src/guard/user-role.guard';
-import { RequiredRole } from 'src/decorators/required-role.decorator';
-import { UpdatePlanDto } from 'src/dto/update-plan.dto';
+import { CreatePlanDto } from '../dto/create-plan.dto';
+import { AuthGuard } from '../guard/auth.guard';
+import { UserRoleGuard } from '../guard/user-role.guard';
+import { RequiredRole } from '../decorators/required-role.decorator';
+import { UpdatePlanDto } from '../dto/update-plan.dto';
 
 @UseGuards(AuthGuard, UserRoleGuard)
 @RequiredRole('Root')
