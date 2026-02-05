@@ -5,22 +5,36 @@ on:
     branches:
       - master
 
+concurrency:
+  group: vms-production
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: [self-hosted, Linux, X64]
 
     steps:
-      - name: 📥 Checkout Backend Repo
+      - name: 📥 Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: master
 
       - name: 🚀 Run Deployment Script
         env:
           HOME: /home/ubuntu
         run: |
+          set -e
+          set -o pipefail
+
           echo "==============================="
-          echo "🚀 VMS Deployment Started"
+          echo "🚀 VMS Production Deployment"
+          echo "🕒 $(date)"
           echo "==============================="
+
+          echo "📌 Current branch:"
+          git rev-parse --abbrev-ref HEAD
+
           bash /home/ubuntu/vms/deploy.sh
-          echo "✅ VMS Deployment Finished"
+
+          echo "✅ Deployment completed successfully"
