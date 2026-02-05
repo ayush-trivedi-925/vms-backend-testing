@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -44,14 +45,68 @@ export class VisitController {
     return this.visitService.allCompletedVisits(req.orgId, req.role);
   }
 
+  @Get('rejected')
+  async getRejectedVisits(@Req() req, @Query('scope') scope: 'org' | 'self') {
+    // Default behavior
+    if (!scope) {
+      scope = 'self';
+    }
+
+    if (!['org', 'self'].includes(scope)) {
+      throw new BadRequestException('Invalid scope value');
+    }
+
+    return this.visitService.getRejectedVisits(
+      req.userId,
+      req.orgId,
+      req.role,
+      scope,
+    );
+  }
+
+  @Get('pending')
+  async getPendingVisits(@Req() req, @Query('scope') scope: 'org' | 'self') {
+    // Default behavior
+    if (!scope) {
+      scope = 'self';
+    }
+
+    if (!['org', 'self'].includes(scope)) {
+      throw new BadRequestException('Invalid scope value');
+    }
+
+    return this.visitService.getPendingVisits(
+      req.userId,
+      req.orgId,
+      req.role,
+      scope,
+    );
+  }
+
   @Get('visitors-per-department')
   async getVisitorsPerDepartment(@Req() req) {
     return this.visitService.getVisitorsPerDepartment(req.orgId);
   }
 
   @Get('selfvisits')
-  async getSelfVisits(@Req() req) {
-    return this.visitService.getSelfVisit(req.userId, req.orgId, req.role);
+  async getSelfVisits(
+    @Req() req,
+    @Query('type') type: 'ONGOING' | 'COMPLETED',
+  ) {
+    if (!type) {
+      type = 'ONGOING';
+    }
+
+    if (!['COMPLETED', 'ONGOING'].includes(type)) {
+      throw new BadRequestException('Invalid type value.');
+    }
+
+    return this.visitService.getSelfVisit(
+      req.userId,
+      req.orgId,
+      req.role,
+      type,
+    );
   }
 
   @Get('export')

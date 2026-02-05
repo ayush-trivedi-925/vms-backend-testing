@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -419,7 +420,7 @@ export class VisitService {
 
     return {
       success: true,
-      allOnGoingVisits: allOnGoingVisits,
+      visits: allOnGoingVisits,
     };
   }
 
@@ -461,7 +462,7 @@ export class VisitService {
 
     return {
       success: true,
-      allOnGoingVisits: allOnGoingVisits,
+      visits: allOnGoingVisits,
     };
   }
 
@@ -500,7 +501,7 @@ export class VisitService {
 
     return {
       success: true,
-      allCompletedVisits: allCompletedVisits,
+      visits: allCompletedVisits,
     };
   }
   async allCompletedVisitsStaff(orgId: string, role: string, staffId: string) {
@@ -541,7 +542,7 @@ export class VisitService {
 
     return {
       success: true,
-      allCompletedVisits: allCompletedVisits,
+      visits: allCompletedVisits,
     };
   }
 
@@ -763,7 +764,10 @@ export class VisitService {
       throw new NotFoundException('No such visit found.');
     }
 
-    if (visitExists.staffId !== staffExists.id) {
+    if (
+      visitExists.staffId !== staffExists.id &&
+      !['SuperAdmin', 'Admin'].includes(role)
+    ) {
       throw new UnauthorizedException('Unauthorised update attempt.');
     }
 
@@ -884,7 +888,10 @@ export class VisitService {
       throw new NotFoundException('No such visit found.');
     }
 
-    if (visitExists.staffId !== staffExists.id) {
+    if (
+      visitExists.staffId !== staffExists.id &&
+      !['SuperAdmin', 'Admin'].includes(role)
+    ) {
       throw new UnauthorizedException('Unauthorised update attempt.');
     }
 
@@ -1113,7 +1120,12 @@ export class VisitService {
     };
   }
 
-  async getSelfVisit(userId: string, orgId: string, role: string) {
+  async getSelfVisit(
+    userId: string,
+    orgId: string,
+    role: string,
+    type: 'ONGOING' | 'COMPLETED',
+  ) {
     const allowedRoles = ['SuperAdmin', 'Admin', 'Staff'];
     if (!allowedRoles.includes(role)) {
       throw new UnauthorizedException('Invalid role.');
@@ -1134,9 +1146,7 @@ export class VisitService {
       where: {
         staffId: staffExists.id,
         orgId,
-        status: {
-          in: ['ONGOING', 'COMPLETED'],
-        },
+        status: type,
         startTime: {
           not: null, // IMPORTANT
         },
@@ -1158,6 +1168,122 @@ export class VisitService {
     return {
       success: true,
       visits,
+    };
+  }
+
+  async getRejectedVisits(
+    userId: string,
+    orgId: string,
+    role: string,
+    scope: 'org' | 'self',
+  ) {
+    const allowedRoles = ['SuperAdmin', 'Admin', 'Staff'];
+
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException('Invalid role.');
+    }
+
+    let staffId: string | undefined;
+
+    if (scope === 'self') {
+      const staffExists = await this.databaseService.staff.findUnique({
+        where: {
+          userId,
+        },
+      });
+
+      if (!staffExists) {
+        throw new NotFoundException("Staff doesn't exists.");
+      }
+
+      staffId = staffExists.id;
+    }
+
+    if (scope === 'org' && role === 'Staff') {
+      throw new ForbiddenException('Access denied.');
+    }
+
+    const rejectedVisits = await this.databaseService.visit.findMany({
+      where: {
+        orgId,
+        status: 'REJECTED',
+        ...(staffId && { staffId }),
+      },
+      include: {
+        staff: {
+          include: {
+            department: true,
+          },
+        },
+        reasonOfVisit: true,
+        organization: true,
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+    });
+
+    return {
+      success: true,
+      visits: rejectedVisits,
+    };
+  }
+
+  async getPendingVisits(
+    userId: string,
+    orgId: string,
+    role: string,
+    scope: 'org' | 'self',
+  ) {
+    const allowedRoles = ['SuperAdmin', 'Admin', 'Staff'];
+
+    if (!allowedRoles.includes(role)) {
+      throw new UnauthorizedException('Invalid role.');
+    }
+
+    let staffId: string | undefined;
+
+    if (scope === 'self') {
+      const staffExists = await this.databaseService.staff.findUnique({
+        where: {
+          userId,
+        },
+      });
+
+      if (!staffExists) {
+        throw new NotFoundException("Staff doesn't exists.");
+      }
+
+      staffId = staffExists.id;
+    }
+
+    if (scope === 'org' && role === 'Staff') {
+      throw new ForbiddenException('Access denied.');
+    }
+
+    const pendingVisits = await this.databaseService.visit.findMany({
+      where: {
+        orgId,
+        status: 'PENDING',
+        ...(staffId && { staffId }),
+      },
+      include: {
+        staff: {
+          include: {
+            department: true,
+          },
+        },
+        reasonOfVisit: true,
+        organization: true,
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+    });
+
+    return {
+      success: true,
+      visits: pendingVisits,
     };
   }
 }

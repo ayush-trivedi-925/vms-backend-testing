@@ -17,7 +17,6 @@ export class NotificationsGateway implements OnGatewayConnection {
 
   handleConnection(socket: Socket) {
     const userId = socket.handshake.auth.userId;
-    console.log('Socket connected:', socket.id, 'room:', userId);
     if (!userId) {
       socket.disconnect();
       return;
