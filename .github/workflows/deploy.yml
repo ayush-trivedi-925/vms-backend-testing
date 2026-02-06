@@ -20,6 +20,26 @@ jobs:
           fetch-depth: 0
           ref: master
 
+      # ------------------------------------------------------------
+      # Pre-deploy sanity checks 
+      # ------------------------------------------------------------
+      - name: 🩺 Pre-deploy sanity checks
+        run: |
+          set -e
+          echo "🔍 Checking Docker status..."
+          docker info >/dev/null
+
+          echo "💾 Disk usage:"
+          df -h
+
+          echo "🧠 Memory usage:"
+          free -m
+
+          echo "✅ Pre-deploy checks passed"
+
+      # ------------------------------------------------------------
+      # Deployment Start
+      # ------------------------------------------------------------
       - name: 🚀 Run Deployment Script
         env:
           HOME: /home/ubuntu
