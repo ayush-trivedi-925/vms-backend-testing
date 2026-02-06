@@ -1251,7 +1251,7 @@ export class VisitService {
       });
 
       if (!staffExists) {
-        throw new NotFoundException("Staff doesn't exists.");
+        throw new NotFoundException('Staff does not exists.');
       }
 
       staffId = staffExists.id;
