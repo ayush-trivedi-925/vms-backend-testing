@@ -32,6 +32,7 @@ model Organization {
  subscription Subscription?
  featureUsages FeatureUsage[]
  notifications Notification[]
+ workingHours WorkingHours[]
 }
 
 model Visit {
@@ -81,8 +82,40 @@ model Staff {
   manages           TeamReporting[]      @relation("Manager")
   masterOfTeams     Team[]               @relation("MasterManager")
   notifications Notification[]
+  workingHours WorkingHours[]
   
 }
+
+model WorkingHours {
+  id        String   @id @default(uuid())
+  dayOfWeek Weekday
+
+  startsAt  String   // "09:00"
+  endsAt    String   // "18:00"
+
+  isClosed  Boolean  @default(false)
+
+  orgId     String?
+  staffId   String?
+
+  organization Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  staff        Staff?        @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([dayOfWeek, orgId])
+  @@unique([dayOfWeek, staffId])
+}
+
+
+enum Weekday {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
 
 model AttendanceSession {
   id       String   @id @default(uuid())

@@ -4,7 +4,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { AuthRoleEnum } from '@prisma/client';
+import { AuthRoleEnum, Weekday } from '@prisma/client';
 import { DatabaseService } from 'src/database/database.service';
 import { AddStaffMemberDto } from 'src/dto/add-staff-member.dto';
 import { EditStaffMemberDto } from 'src/dto/edit-staff-member.dto';
@@ -480,6 +480,7 @@ export class StaffService {
           orderBy: { createdAt: 'desc' },
           take: 1,
         },
+        workingHours: true,
       },
     });
     if (!staffExists) {
@@ -529,6 +530,7 @@ export class StaffService {
       include: {
         organization: true,
         department: true,
+        workingHours: true,
       },
     });
     if (!staffExists) {
@@ -582,13 +584,68 @@ export class StaffService {
       );
     }
 
-    // If updating this staff to SuperAdmin
-    if (
-      editStaffMemberDto.role === 'SuperAdmin' &&
-      staff.role !== 'SuperAdmin'
-    ) {
-      const existingSuperAdmin =
-        await this.databaseService.userCredential.findFirst({
+    const { workingHours, ...restDto } = editStaffMemberDto;
+    const updateData: any = { ...restDto };
+
+    const ALL_DAYS: Weekday[] = [
+      Weekday.MONDAY,
+      Weekday.TUESDAY,
+      Weekday.WEDNESDAY,
+      Weekday.THURSDAY,
+      Weekday.FRIDAY,
+      Weekday.SATURDAY,
+      Weekday.SUNDAY,
+    ];
+
+    return await this.databaseService.$transaction(async (tx) => {
+      // =============================
+      // 1. Working Hours
+      // =============================
+      if (workingHours) {
+        const { startsAt, endsAt, days } = workingHours;
+
+        if (startsAt >= endsAt) {
+          throw new BadRequestException(
+            'Working hours start time must be before end time',
+          );
+        }
+
+        if (!days.length) {
+          throw new BadRequestException(
+            'At least one working day must be selected',
+          );
+        }
+
+        for (const day of ALL_DAYS) {
+          const isSelected = days.includes(day);
+
+          await tx.workingHours.upsert({
+            where: {
+              dayOfWeek_staffId: {
+                dayOfWeek: day,
+                staffId,
+              },
+            },
+            update: {
+              isClosed: !isSelected,
+              ...(isSelected ? { startsAt, endsAt } : {}),
+            },
+            create: {
+              dayOfWeek: day,
+              staffId,
+              isClosed: !isSelected,
+              startsAt: isSelected ? startsAt : '09:00',
+              endsAt: isSelected ? endsAt : '18:00',
+            },
+          });
+        }
+      }
+
+      // =============================
+      // 2. SuperAdmin uniqueness
+      // =============================
+      if (updateData.role === 'SuperAdmin' && staff.role !== 'SuperAdmin') {
+        const existingSuperAdmin = await tx.userCredential.findFirst({
           where: {
             orgId: targetOrgId,
             role: 'SuperAdmin',
@@ -596,112 +653,97 @@ export class StaffService {
           include: { staff: true },
         });
 
-      // If another SuperAdmin exists - demote them to Admin
-      if (existingSuperAdmin && existingSuperAdmin.staff?.id !== staffId) {
-        await this.databaseService.userCredential.update({
-          where: { id: existingSuperAdmin.id },
-          data: {
-            role: 'Admin',
-          },
-        });
+        if (
+          existingSuperAdmin &&
+          existingSuperAdmin.staff &&
+          existingSuperAdmin.staff?.id !== staffId
+        ) {
+          await tx.userCredential.update({
+            where: { id: existingSuperAdmin.id },
+            data: { role: 'Admin' },
+          });
 
-        // Also update staff table role
-        await this.databaseService.staff.update({
-          where: { id: existingSuperAdmin.staff?.id },
-          data: {
-            role: 'Admin',
-          },
-        });
+          await tx.staff.update({
+            where: { id: existingSuperAdmin.staff.id },
+            data: { role: 'Admin' },
+          });
+        }
       }
-    }
-    // CASE 1: Staff already linked to UserCredential
-    if (staff.userId) {
-      // Update Staff record
-      await this.databaseService.staff.update({
+
+      // =============================
+      // 3. Update Staff record
+      // =============================
+      await tx.staff.update({
         where: { id: staffId },
+        data: updateData,
+      });
+
+      // =============================
+      // 4. If credential exists
+      // =============================
+      if (staff.userId) {
+        const userUpdateData: any = {
+          role: updateData.role,
+          email: updateData.email,
+        };
+
+        // account status handling
+        if (
+          (staff.role === 'Admin' || staff.role === 'SuperAdmin') &&
+          updateData.role === 'Staff'
+        ) {
+          userUpdateData.accountStatus = 'Disabled';
+        }
+
+        if (
+          (staff.role === 'Staff' && updateData.role === 'Admin') ||
+          updateData.role === 'SuperAdmin'
+        ) {
+          userUpdateData.accountStatus = 'Active';
+        }
+
+        await tx.userCredential.update({
+          where: { id: staff.userId },
+          data: userUpdateData,
+        });
+
+        return {
+          success: true,
+          message: 'Staff details updated successfully.',
+        };
+      }
+
+      // =============================
+      // 5. Create credential if missing
+      // =============================
+      const oneTimePassword = this.generateOneTimePassword(organization.name);
+      const hashedPassword = await bcrypt.hash(oneTimePassword, 10);
+
+      await tx.userCredential.create({
         data: {
-          ...editStaffMemberDto,
+          orgId: targetOrgId,
+          email: updateData.email,
+          password: hashedPassword,
+          role: updateData.role,
+          firstTimeLogin: true,
+          staff: {
+            connect: { id: staffId },
+          },
         },
       });
 
-      // Prepare update for UserCredential
-      const userUpdateData: any = {
-        role: editStaffMemberDto.role as AuthRoleEnum,
-        email: editStaffMemberDto.email,
+      await this.mailService.sendUserRegistrationMail(
+        staff,
+        organization,
+        oneTimePassword,
+        updateData.role,
+      );
+
+      return {
+        success: true,
+        message: 'Staff updated and one-time password sent to email.',
       };
-
-      // If demoted from Admin/SuperAdmin - Staff, disable account
-      if (
-        (staff.role === 'Admin' || staff.role === 'SuperAdmin') &&
-        editStaffMemberDto.role === 'Staff'
-      ) {
-        await this.databaseService.userCredential.update({
-          where: { id: staff.userId },
-          data: {
-            accountStatus: 'Disabled',
-          },
-        });
-      }
-      // If demoted from Staff - Admin/SuperAdmin, Active account
-      if (
-        (staff.role === 'Staff' && editStaffMemberDto.role === 'Admin') ||
-        editStaffMemberDto.role === 'SuperAdmin'
-      ) {
-        await this.databaseService.userCredential.update({
-          where: { id: staff.userId },
-          data: {
-            accountStatus: 'Active',
-          },
-        });
-      }
-
-      await this.databaseService.userCredential.update({
-        where: { id: staff.userId },
-        data: userUpdateData,
-      });
-
-      return { success: true, message: 'Staff details updated successfully.' };
-    }
-
-    // CASE 2: Staff does not have a linked UserCredential
-    const oneTimePassword = this.generateOneTimePassword(organization.name);
-    const hashedPassword = await bcrypt.hash(oneTimePassword, 10);
-
-    // Update staff record
-    await this.databaseService.staff.update({
-      where: { id: staffId },
-      data: {
-        ...editStaffMemberDto,
-      },
     });
-
-    // Create a new UserCredential (active by default)
-    await this.databaseService.userCredential.create({
-      data: {
-        orgId: targetOrgId,
-        email: staff.email,
-        password: hashedPassword,
-        role: editStaffMemberDto.role as AuthRoleEnum,
-        firstTimeLogin: true,
-        staff: {
-          connect: { id: staffId },
-        },
-      },
-    });
-
-    const selectedRole = editStaffMemberDto.role as string;
-
-    await this.mailService.sendUserRegistrationMail(
-      staff,
-      organization,
-      oneTimePassword,
-      selectedRole,
-    );
-
-    return {
-      success: true,
-      message: 'Staff updated and one-time password sent to email.',
-    };
   }
 
   async deleteStaffMember(

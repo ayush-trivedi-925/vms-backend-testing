@@ -1,5 +1,13 @@
-import { IsEmail, IsOptional, IsString, IsEnum } from 'class-validator';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  IsEnum,
+  ValidateNested,
+} from 'class-validator';
 import { AccountStatusEnum, MemberRoleEnum } from '@prisma/client';
+import { Type } from 'class-transformer';
+import { WorkingHoursDto } from './working-hours.dto';
 
 export class EditStaffMemberDto {
   @IsOptional()
@@ -25,4 +33,9 @@ export class EditStaffMemberDto {
   @IsOptional()
   @IsEnum(AccountStatusEnum)
   accountStatus?: AccountStatusEnum;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => WorkingHoursDto)
+  workingHours?: WorkingHoursDto;
 }

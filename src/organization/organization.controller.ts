@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Put,
   Req,
@@ -18,6 +19,8 @@ import { EditOrganizationDto } from 'src/dto/edit-organization.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerConfig } from 'src/service/multer/multer.config';
 import { UpdateSubscriptionDto } from 'src/dto/update-subscription.dto';
+import { UpdateDayWorkingHoursDto } from 'src/dto/update-working-hour-day.dto';
+import { Weekday } from '@prisma/client';
 
 @UseGuards(AuthGuard)
 @Controller('organization')
@@ -63,6 +66,40 @@ export class OrganizationController {
   @Get('plan/:orgId')
   async getOrgPlanDetails(@Param('orgId') orgId: string, @Req() req) {
     return this.organizationService.getOrgPlanDetails(orgId, req.role);
+  }
+
+  @Patch(':orgId/working-hours/day')
+  async updateDayWorkingHours(
+    @Req() req,
+    @Param('orgId') orgId: string,
+    @Body() dto: UpdateDayWorkingHoursDto,
+  ) {
+    await this.organizationService.updateSingleDayWorkingHours(
+      req.userId,
+      orgId,
+      req.role,
+      dto,
+    );
+
+    return {
+      success: true,
+      message: `Working hours updated for ${dto.day}`,
+    };
+  }
+
+  @Patch(':orgId/working-hours/close-day')
+  async closeDay(
+    @Req() req,
+    @Param('orgId') orgId: string,
+    @Body('day') day: Weekday,
+  ) {
+    await this.organizationService.closeSingleDay(
+      req.userId,
+      orgId,
+      req.role,
+      day,
+    );
+    return { success: true };
   }
 
   @UseInterceptors(FileInterceptor('logo', multerConfig))

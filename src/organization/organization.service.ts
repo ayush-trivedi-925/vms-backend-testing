@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -13,6 +14,8 @@ import { MailService } from 'src/service/mail/mail.service';
 import { encrypt, decrypt } from '../utils/encryption.util';
 import { ConfigService } from '@nestjs/config';
 import { UpdateSubscriptionDto } from 'src/dto/update-subscription.dto';
+import { Weekday } from '@prisma/client';
+import { UpdateDayWorkingHoursDto } from 'src/dto/update-working-hour-day.dto';
 
 @Injectable()
 export class OrganizationService {
@@ -216,7 +219,7 @@ export class OrganizationService {
     }
 
     // Build update data safely: exclude settingCode from DTO spread
-    const { settingCode, ...restDto } = editOrganizationDto;
+    const { settingCode, workingHours, ...restDto } = editOrganizationDto;
 
     const updateData: any = {
       ...restDto,
@@ -231,16 +234,162 @@ export class OrganizationService {
     if (logoUrl) {
       updateData.logo = logoUrl;
     }
+    const ALL_DAYS: Weekday[] = [
+      Weekday.MONDAY,
+      Weekday.TUESDAY,
+      Weekday.WEDNESDAY,
+      Weekday.THURSDAY,
+      Weekday.FRIDAY,
+      Weekday.SATURDAY,
+      Weekday.SUNDAY,
+    ];
 
-    await this.databaseService.organization.update({
-      where: { id: targetOrgId },
-      data: updateData,
+    // validate working hours BEFORE transaction
+    if (workingHours) {
+      if (workingHours.startsAt >= workingHours.endsAt) {
+        throw new BadRequestException(
+          'Working hours start time must be before end time',
+        );
+      }
+
+      if (!workingHours.days.length) {
+        throw new BadRequestException(
+          'At least one working day must be selected',
+        );
+      }
+    }
+
+    await this.databaseService.$transaction(async (tx) => {
+      // 1 update organization
+      await tx.organization.update({
+        where: { id: targetOrgId },
+        data: updateData,
+      });
+
+      // 2 upsert working hours (all 7 days)
+      if (workingHours) {
+        const { startsAt, endsAt, days } = workingHours;
+
+        for (const day of ALL_DAYS) {
+          const isSelected = days.includes(day);
+
+          await tx.workingHours.upsert({
+            where: {
+              dayOfWeek_orgId: {
+                dayOfWeek: day,
+                orgId: targetOrgId,
+              },
+            },
+            update: {
+              isClosed: !isSelected,
+              ...(isSelected ? { startsAt, endsAt } : {}),
+            },
+            create: {
+              dayOfWeek: day,
+              orgId: targetOrgId,
+              isClosed: !isSelected,
+              startsAt: isSelected ? startsAt : '09:00',
+              endsAt: isSelected ? endsAt : '18:00',
+            },
+          });
+        }
+      }
     });
 
     return {
       success: true,
       message: 'Organization details have been updated successfully.',
     };
+  }
+
+  async updateSingleDayWorkingHours(
+    userId: string,
+    orgId: string,
+    role: string,
+    dto: UpdateDayWorkingHoursDto,
+  ) {
+    const allowedRoles = ['Root', 'SuperAdmin', 'Admin'];
+    if (!allowedRoles.includes(role)) {
+      throw new ForbiddenException('Access denied.');
+    }
+
+    const userExists = await this.databaseService.userCredential.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (
+      !userExists ||
+      !['Root', 'SuperAdmin', 'Admin'].includes(userExists.role)
+    ) {
+      throw new NotFoundException('User not found.');
+    }
+
+    const { day, startsAt, endsAt } = dto;
+
+    if (startsAt >= endsAt) {
+      throw new BadRequestException('Start time must be before end time');
+    }
+
+    return this.databaseService.workingHours.upsert({
+      where: {
+        dayOfWeek_orgId: {
+          dayOfWeek: day,
+          orgId,
+        },
+      },
+      update: {
+        isClosed: false, // forced open
+        startsAt,
+        endsAt,
+      },
+      create: {
+        orgId,
+        dayOfWeek: day,
+        isClosed: false, // forced open
+        startsAt,
+        endsAt,
+      },
+    });
+  }
+
+  async closeSingleDay(
+    userId: string,
+    orgId: string,
+    role: string,
+    day: Weekday,
+  ) {
+    const allowedRoles = ['Root', 'SuperAdmin', 'Admin'];
+    if (!allowedRoles.includes(role)) {
+      throw new ForbiddenException('Access denied.');
+    }
+
+    const userExists = await this.databaseService.userCredential.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (
+      !userExists ||
+      !['Root', 'SuperAdmin', 'Admin'].includes(userExists.role)
+    ) {
+      throw new NotFoundException('User not found.');
+    }
+
+    // (include your role/user checks like other APIs)
+    return this.databaseService.workingHours.upsert({
+      where: { dayOfWeek_orgId: { orgId, dayOfWeek: day } },
+      update: { isClosed: true },
+      create: {
+        orgId,
+        dayOfWeek: day,
+        isClosed: true,
+        startsAt: '09:00',
+        endsAt: '18:00',
+      },
+    });
   }
 
   async getAllOrganization(role: string) {
@@ -277,6 +426,9 @@ export class OrganizationService {
       await this.databaseService.organization.findUnique({
         where: {
           id: orgId,
+        },
+        include: {
+          workingHours: true,
         },
       });
 

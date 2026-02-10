@@ -7,7 +7,9 @@ import {
   Length,
   Matches,
   Min,
+  ValidateNested,
 } from 'class-validator';
+import { WorkingHoursDto } from './working-hours.dto';
 
 export class EditOrganizationDto {
   @IsOptional()
@@ -43,4 +45,9 @@ export class EditOrganizationDto {
   @IsInt()
   @Min(1)
   accountLimit?: number;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => WorkingHoursDto)
+  workingHours?: WorkingHoursDto;
 }
