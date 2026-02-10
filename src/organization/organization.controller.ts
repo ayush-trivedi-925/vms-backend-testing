@@ -68,39 +68,39 @@ export class OrganizationController {
     return this.organizationService.getOrgPlanDetails(orgId, req.role);
   }
 
-  @Patch(':orgId/working-hours/day')
-  async updateDayWorkingHours(
-    @Req() req,
-    @Param('orgId') orgId: string,
-    @Body() dto: UpdateDayWorkingHoursDto,
-  ) {
-    await this.organizationService.updateSingleDayWorkingHours(
-      req.userId,
-      orgId,
-      req.role,
-      dto,
-    );
+  // @Patch(':orgId/working-hours/day')
+  // async updateDayWorkingHours(
+  //   @Req() req,
+  //   @Param('orgId') orgId: string,
+  //   @Body() dto: UpdateDayWorkingHoursDto,
+  // ) {
+  //   await this.organizationService.updateSingleDayWorkingHours(
+  //     req.userId,
+  //     orgId,
+  //     req.role,
+  //     dto,
+  //   );
 
-    return {
-      success: true,
-      message: `Working hours updated for ${dto.day}`,
-    };
-  }
+  //   return {
+  //     success: true,
+  //     message: `Working hours updated for ${dto.day}`,
+  //   };
+  // }
 
-  @Patch(':orgId/working-hours/close-day')
-  async closeDay(
-    @Req() req,
-    @Param('orgId') orgId: string,
-    @Body('day') day: Weekday,
-  ) {
-    await this.organizationService.closeSingleDay(
-      req.userId,
-      orgId,
-      req.role,
-      day,
-    );
-    return { success: true };
-  }
+  // @Patch(':orgId/working-hours/close-day')
+  // async closeDay(
+  //   @Req() req,
+  //   @Param('orgId') orgId: string,
+  //   @Body('day') day: Weekday,
+  // ) {
+  //   await this.organizationService.closeSingleDay(
+  //     req.userId,
+  //     orgId,
+  //     req.role,
+  //     day,
+  //   );
+  //   return { success: true };
+  // }
 
   @UseInterceptors(FileInterceptor('logo', multerConfig))
   @Put(':orgId')

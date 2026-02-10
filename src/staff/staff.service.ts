@@ -460,6 +460,11 @@ export class StaffService {
         id: staffId,
       },
       include: {
+        organization: {
+          include: {
+            workingHours: true,
+          },
+        },
         department: true,
         attendanceEvents: {
           where: {
@@ -528,7 +533,11 @@ export class StaffService {
         userId,
       },
       include: {
-        organization: true,
+        organization: {
+          include: {
+            workingHours: true,
+          },
+        },
         department: true,
         workingHours: true,
       },

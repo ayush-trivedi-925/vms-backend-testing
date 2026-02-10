@@ -302,95 +302,95 @@ export class OrganizationService {
     };
   }
 
-  async updateSingleDayWorkingHours(
-    userId: string,
-    orgId: string,
-    role: string,
-    dto: UpdateDayWorkingHoursDto,
-  ) {
-    const allowedRoles = ['Root', 'SuperAdmin', 'Admin'];
-    if (!allowedRoles.includes(role)) {
-      throw new ForbiddenException('Access denied.');
-    }
+  // async updateSingleDayWorkingHours(
+  //   userId: string,
+  //   orgId: string,
+  //   role: string,
+  //   dto: UpdateDayWorkingHoursDto,
+  // ) {
+  //   const allowedRoles = ['Root', 'SuperAdmin', 'Admin'];
+  //   if (!allowedRoles.includes(role)) {
+  //     throw new ForbiddenException('Access denied.');
+  //   }
 
-    const userExists = await this.databaseService.userCredential.findUnique({
-      where: {
-        id: userId,
-      },
-    });
+  //   const userExists = await this.databaseService.userCredential.findUnique({
+  //     where: {
+  //       id: userId,
+  //     },
+  //   });
 
-    if (
-      !userExists ||
-      !['Root', 'SuperAdmin', 'Admin'].includes(userExists.role)
-    ) {
-      throw new NotFoundException('User not found.');
-    }
+  //   if (
+  //     !userExists ||
+  //     !['Root', 'SuperAdmin', 'Admin'].includes(userExists.role)
+  //   ) {
+  //     throw new NotFoundException('User not found.');
+  //   }
 
-    const { day, startsAt, endsAt } = dto;
+  //   const { day, startsAt, endsAt } = dto;
 
-    if (startsAt >= endsAt) {
-      throw new BadRequestException('Start time must be before end time');
-    }
+  //   if (startsAt >= endsAt) {
+  //     throw new BadRequestException('Start time must be before end time');
+  //   }
 
-    return this.databaseService.workingHours.upsert({
-      where: {
-        dayOfWeek_orgId: {
-          dayOfWeek: day,
-          orgId,
-        },
-      },
-      update: {
-        isClosed: false, // forced open
-        startsAt,
-        endsAt,
-      },
-      create: {
-        orgId,
-        dayOfWeek: day,
-        isClosed: false, // forced open
-        startsAt,
-        endsAt,
-      },
-    });
-  }
+  //   return this.databaseService.workingHours.upsert({
+  //     where: {
+  //       dayOfWeek_orgId: {
+  //         dayOfWeek: day,
+  //         orgId,
+  //       },
+  //     },
+  //     update: {
+  //       isClosed: false, // forced open
+  //       startsAt,
+  //       endsAt,
+  //     },
+  //     create: {
+  //       orgId,
+  //       dayOfWeek: day,
+  //       isClosed: false, // forced open
+  //       startsAt,
+  //       endsAt,
+  //     },
+  //   });
+  // }
 
-  async closeSingleDay(
-    userId: string,
-    orgId: string,
-    role: string,
-    day: Weekday,
-  ) {
-    const allowedRoles = ['Root', 'SuperAdmin', 'Admin'];
-    if (!allowedRoles.includes(role)) {
-      throw new ForbiddenException('Access denied.');
-    }
+  // async closeSingleDay(
+  //   userId: string,
+  //   orgId: string,
+  //   role: string,
+  //   day: Weekday,
+  // ) {
+  //   const allowedRoles = ['Root', 'SuperAdmin', 'Admin'];
+  //   if (!allowedRoles.includes(role)) {
+  //     throw new ForbiddenException('Access denied.');
+  //   }
 
-    const userExists = await this.databaseService.userCredential.findUnique({
-      where: {
-        id: userId,
-      },
-    });
+  //   const userExists = await this.databaseService.userCredential.findUnique({
+  //     where: {
+  //       id: userId,
+  //     },
+  //   });
 
-    if (
-      !userExists ||
-      !['Root', 'SuperAdmin', 'Admin'].includes(userExists.role)
-    ) {
-      throw new NotFoundException('User not found.');
-    }
+  //   if (
+  //     !userExists ||
+  //     !['Root', 'SuperAdmin', 'Admin'].includes(userExists.role)
+  //   ) {
+  //     throw new NotFoundException('User not found.');
+  //   }
 
-    // (include your role/user checks like other APIs)
-    return this.databaseService.workingHours.upsert({
-      where: { dayOfWeek_orgId: { orgId, dayOfWeek: day } },
-      update: { isClosed: true },
-      create: {
-        orgId,
-        dayOfWeek: day,
-        isClosed: true,
-        startsAt: '09:00',
-        endsAt: '18:00',
-      },
-    });
-  }
+  //   // (include your role/user checks like other APIs)
+  //   return this.databaseService.workingHours.upsert({
+  //     where: { dayOfWeek_orgId: { orgId, dayOfWeek: day } },
+  //     update: { isClosed: true },
+  //     create: {
+  //       orgId,
+  //       dayOfWeek: day,
+  //       isClosed: true,
+  //       startsAt: '09:00',
+  //       endsAt: '18:00',
+  //     },
+  //   });
+  // }
 
   async getAllOrganization(role: string) {
     const allowedRoles = ['Root'];

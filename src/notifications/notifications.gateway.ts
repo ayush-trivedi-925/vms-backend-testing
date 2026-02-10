@@ -8,7 +8,7 @@ import { Server, Socket } from 'socket.io';
 @WebSocketGateway({
   namespace: '/notifications',
   cors: {
-    origin: ['https//vms.seguevisit.com'],
+    origin: ['https://vms.seguevisit.com'],
   },
 })
 export class NotificationsGateway implements OnGatewayConnection {
