@@ -19,7 +19,8 @@ type AttendanceState =
   | 'NO_SESSION_TODAY'
   | 'WORKING'
   | 'ON_BREAK'
-  | 'PREVIOUS_SESSION_OPEN';
+  | 'PREVIOUS_SESSION_OPEN'
+  | 'DAY_COMPLETED';
 
 @Injectable()
 export class AttendanceService {
@@ -31,6 +32,10 @@ export class AttendanceService {
       .startOf('day') // midnight in org
       .toUTC() // convert back to UTC for DB compare
       .toJSDate();
+  }
+
+  private floorToSecond(date: Date) {
+    return new Date(Math.floor(date.getTime() / 1000) * 1000);
   }
 
   // private endOfOrgDay(date: Date, timezone: string): Date {
@@ -105,28 +110,60 @@ export class AttendanceService {
   }
 
   private async getStateForScan(staffId: string, now: Date) {
-    const openSession = await this.databaseService.attendanceSession.findFirst({
-      where: { staffId, status: AttendanceSessionStatus.OPEN },
-      include: {
-        events: {
-          orderBy: { timestamp: 'desc' },
-          take: 1,
-        },
-      },
-    });
-
     const staff = await this.databaseService.staff.findUnique({
       where: { id: staffId },
-      include: {
-        organization: true,
-      },
+      include: { organization: true },
     });
 
     if (!staff?.organization?.timezone) {
       throw new BadRequestException('Organization timezone not configured');
     }
 
-    const tz = staff?.organization?.timezone;
+    const tz = staff.organization.timezone;
+    const todayDate = this.startOfOrgDay(now, tz);
+
+    const openOldSession =
+      await this.databaseService.attendanceSession.findFirst({
+        where: {
+          staffId,
+          status: AttendanceSessionStatus.OPEN,
+          date: { lt: todayDate },
+        },
+        orderBy: { date: 'desc' },
+      });
+
+    if (openOldSession) {
+      return {
+        state: 'PREVIOUS_SESSION_OPEN' as AttendanceState,
+        session: openOldSession,
+        lastEvent: null,
+      };
+    }
+
+    // check today's session FIRST
+    const todaySession = await this.databaseService.attendanceSession.findFirst(
+      {
+        where: { staffId, date: todayDate },
+        include: {
+          events: {
+            orderBy: { timestamp: 'desc' },
+            take: 1,
+          },
+        },
+      },
+    );
+
+    // day finished
+    if (todaySession?.status === AttendanceSessionStatus.CLOSED) {
+      return {
+        state: 'DAY_COMPLETED' as AttendanceState,
+        session: null,
+        lastEvent: null,
+      };
+    }
+
+    // now check open session
+    const openSession = todaySession;
 
     if (!openSession) {
       return {
@@ -136,20 +173,9 @@ export class AttendanceService {
       };
     }
 
-    const todayDate = this.startOfOrgDay(now, tz);
-
-    if (openSession.date < todayDate) {
-      return {
-        state: 'PREVIOUS_SESSION_OPEN' as AttendanceState,
-        session: openSession,
-        lastEvent: openSession.events[0] || null,
-      };
-    }
-
     const lastEvent = openSession.events[0];
 
     if (!lastEvent) {
-      // session with no events – treat like NO_SESSION_TODAY
       return {
         state: 'NO_SESSION_TODAY' as AttendanceState,
         session: null,
@@ -176,7 +202,6 @@ export class AttendanceService {
       };
     }
 
-    // Last event is punch_out or late punch – treat as closed logically
     return {
       state: 'NO_SESSION_TODAY' as AttendanceState,
       session: null,
@@ -190,10 +215,9 @@ export class AttendanceService {
     if (!events.length) {
       return { totalWorkSeconds: 0, totalBreakSeconds: 0 };
     }
-
-    const sorted = [...events].sort(
-      (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
-    );
+    const sorted = [...events]
+      .map((e) => ({ ...e, timestamp: this.floorToSecond(e.timestamp) }))
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
     let totalWorkSeconds = 0;
     let totalBreakSeconds = 0;
@@ -310,6 +334,17 @@ export class AttendanceService {
         allowedActions: ['BREAK_END'],
       };
     }
+
+    if (state === 'DAY_COMPLETED') {
+      return {
+        staffId: staff.id,
+        staffName: staff.name,
+        state,
+        allowedActions: [],
+        message: 'You have already completed attendance for today.',
+      };
+    }
+
     if (!orgExists?.timezone) {
       throw new BadRequestException('Organization timezone not configured');
     }
