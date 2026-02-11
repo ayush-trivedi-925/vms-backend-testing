@@ -1,15 +1,18 @@
 import { Type } from 'class-transformer';
 import {
   IsInt,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
   Length,
   Matches,
   Min,
+  Validate,
   ValidateNested,
 } from 'class-validator';
 import { WorkingHoursDto } from './working-hours.dto';
+import { IsValidTimezone } from 'src/common/validators/is-valid-timezone.validator';
 
 export class EditOrganizationDto {
   @IsOptional()
@@ -19,6 +22,11 @@ export class EditOrganizationDto {
   @IsOptional()
   @IsString()
   email?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @Validate(IsValidTimezone)
+  timezone: string;
 
   @IsOptional()
   @IsString()

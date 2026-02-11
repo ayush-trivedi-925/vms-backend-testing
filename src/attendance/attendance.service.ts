@@ -2,7 +2,6 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
 
@@ -14,6 +13,7 @@ import {
 
 import { ScanAttendanceDto, AttendanceActionDto } from '../dto/attendance.dto';
 // import * as ExcelJS from 'exceljs';
+import { DateTime } from 'luxon';
 
 type AttendanceState =
   | 'NO_SESSION_TODAY'
@@ -25,39 +25,40 @@ type AttendanceState =
 export class AttendanceService {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  private startOfDay(date: Date): Date {
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  private startOfOrgDay(date: Date, timezone: string): Date {
+    return DateTime.fromJSDate(date, { zone: 'utc' }) // DB values are UTC
+      .setZone(timezone) // move to org zone
+      .startOf('day') // midnight in org
+      .toUTC() // convert back to UTC for DB compare
+      .toJSDate();
   }
 
-  private getCurrentMonthRange() {
-    const now = new Date();
-    return {
-      start: new Date(now.getFullYear(), now.getMonth(), 1),
-      end: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999),
-    };
-  }
+  // private endOfOrgDay(date: Date, timezone: string): Date {
+  //   return DateTime.fromJSDate(date, { zone: 'utc' })
+  //     .setZone(timezone)
+  //     .endOf('day')
+  //     .toUTC()
+  //     .toJSDate();
+  // }
 
-  private toLocalDate(date?: Date | null): Date | null {
-    if (!date) return null;
+  // private toOrgTime(date: Date, timezone: string): string {
+  //   return DateTime.fromJSDate(date, { zone: 'utc' })
+  //     .setZone(timezone)
+  //     .toFormat('dd LLL yyyy hh:mm a');
+  // }
 
-    // Convert UTC date → local date
-    const local = new Date(date);
-    local.setMinutes(local.getMinutes() - local.getTimezoneOffset());
-    return local;
-  }
+  // private formatWorkDuration(seconds: number): string {
+  //   if (!seconds || seconds <= 0) return '0 mins';
 
-  private formatWorkDuration(seconds: number): string {
-    if (!seconds || seconds <= 0) return '0 mins';
+  //   const minutes = Math.round(seconds / 60);
 
-    const minutes = Math.round(seconds / 60);
+  //   if (minutes < 60) {
+  //     return `${minutes} mins`;
+  //   }
 
-    if (minutes < 60) {
-      return `${minutes} mins`;
-    }
-
-    const hours = minutes / 60;
-    return `${hours.toFixed(2)} hrs`;
-  }
+  //   const hours = minutes / 60;
+  //   return `${hours.toFixed(2)} hrs`;
+  // }
 
   private async getStaffByEmployeeCode(
     orgId: string,
@@ -114,6 +115,19 @@ export class AttendanceService {
       },
     });
 
+    const staff = await this.databaseService.staff.findUnique({
+      where: { id: staffId },
+      include: {
+        organization: true,
+      },
+    });
+
+    if (!staff?.organization?.timezone) {
+      throw new BadRequestException('Organization timezone not configured');
+    }
+
+    const tz = staff?.organization?.timezone;
+
     if (!openSession) {
       return {
         state: 'NO_SESSION_TODAY' as AttendanceState,
@@ -122,10 +136,9 @@ export class AttendanceService {
       };
     }
 
-    const sessionDate = this.startOfDay(openSession.date);
-    const todayDate = this.startOfDay(now);
+    const todayDate = this.startOfOrgDay(now, tz);
 
-    if (sessionDate < todayDate) {
+    if (openSession.date < todayDate) {
       return {
         state: 'PREVIOUS_SESSION_OPEN' as AttendanceState,
         session: openSession,
@@ -297,10 +310,15 @@ export class AttendanceService {
         allowedActions: ['BREAK_END'],
       };
     }
+    if (!orgExists?.timezone) {
+      throw new BadRequestException('Organization timezone not configured');
+    }
 
-    const date = this.startOfDay(session!.date);
+    const tz = orgExists.timezone;
 
-    const previousDate = date.toISOString().split('T')[0];
+    const previousDate = DateTime.fromJSDate(session!.date, { zone: 'utc' })
+      .setZone(tz)
+      .toISODate();
 
     // PREVIOUS_SESSION_OPEN
     return {
@@ -374,7 +392,23 @@ export class AttendanceService {
     dto: AttendanceActionDto,
   ) {
     const time = dto.time ? new Date(dto.time) : new Date();
-    const today = this.startOfDay(time);
+
+    if (isNaN(time.getTime())) {
+      throw new BadRequestException('Invalid time');
+    }
+
+    const org = await this.databaseService.organization.findUnique({
+      where: {
+        id: orgId,
+      },
+    });
+
+    if (!org?.timezone) {
+      throw new BadRequestException('Organization timezone not configured');
+    }
+
+    const tz = org?.timezone;
+    const today = this.startOfOrgDay(time, tz);
 
     return this.databaseService.$transaction(async (tx) => {
       // make sure there is no open session from previous days
@@ -444,6 +478,10 @@ export class AttendanceService {
     }
     const time = dto.time ? new Date(dto.time) : new Date();
 
+    if (isNaN(time.getTime())) {
+      throw new BadRequestException('Invalid time');
+    }
+
     return this.databaseService.$transaction(async (tx) => {
       const session = await tx.attendanceSession.findUnique({
         where: { id: dto.sessionId },
@@ -499,6 +537,10 @@ export class AttendanceService {
     }
     const time = dto.time ? new Date(dto.time) : new Date();
 
+    if (isNaN(time.getTime())) {
+      throw new BadRequestException('Invalid time');
+    }
+
     return this.databaseService.$transaction(async (tx) => {
       const session = await tx.attendanceSession.findUnique({
         where: { id: dto.sessionId },
@@ -549,6 +591,10 @@ export class AttendanceService {
       throw new BadRequestException('sessionId is required for PUNCH_OUT');
     }
     const time = dto.time ? new Date(dto.time) : new Date();
+
+    if (isNaN(time.getTime())) {
+      throw new BadRequestException('Invalid time');
+    }
 
     return this.databaseService.$transaction(async (tx) => {
       const session = await tx.attendanceSession.findUnique({
@@ -620,9 +666,34 @@ export class AttendanceService {
       );
     }
 
+    const org = await this.databaseService.organization.findUnique({
+      where: {
+        id: orgId,
+      },
+    });
+
     const approxOut = new Date(approxPunchOutTime);
     const punchIn = new Date(currentPunchInTime);
-    const today = this.startOfDay(punchIn);
+
+    if (approxOut >= punchIn) {
+      throw new BadRequestException(
+        'Late punch-out must be before new punch-in time.',
+      );
+    }
+
+    if (isNaN(approxOut.getTime())) {
+      throw new BadRequestException('Invalid approx punch-out time');
+    }
+
+    if (isNaN(punchIn.getTime())) {
+      throw new BadRequestException('Invalid current punch-in time');
+    }
+
+    if (!org?.timezone) {
+      throw new BadRequestException('Organization timezone not configured');
+    }
+
+    const today = this.startOfOrgDay(punchIn, org?.timezone);
 
     return this.databaseService.$transaction(async (tx) => {
       const prevSession = await tx.attendanceSession.findUnique({
@@ -636,6 +707,15 @@ export class AttendanceService {
 
       if (prevSession.status !== AttendanceSessionStatus.OPEN) {
         throw new BadRequestException('Previous session is not open.');
+      }
+
+      if (
+        prevSession.firstPunchInAt &&
+        approxOut <= prevSession.firstPunchInAt
+      ) {
+        throw new BadRequestException(
+          'Punch-out must be after the original punch-in time.',
+        );
       }
 
       // late punch-out event
@@ -702,104 +782,4 @@ export class AttendanceService {
       };
     });
   }
-
-  // async exportLastMonthAttendance(
-  //   orgId: string,
-  //   userId: string,
-  //   role: string,
-  //   staffId: string,
-  // ) {
-  //   const allowedRoles = ['SuperAdmin', 'Admin'];
-  //   if (!allowedRoles.includes(role)) {
-  //     throw new UnauthorizedException('Invalid role.');
-  //   }
-
-  //   const { start, end } = this.getCurrentMonthRange();
-
-  //   const organizationExists =
-  //     await this.databaseService.organization.findUnique({
-  //       where: {
-  //         id: orgId,
-  //       },
-  //     });
-
-  //   if (!organizationExists) {
-  //     throw new BadRequestException('Invalid organization id.');
-  //   }
-
-  //   const userExists = await this.databaseService.userCredential.findUnique({
-  //     where: {
-  //       id: userId,
-  //     },
-  //   });
-
-  //   if (!userExists || userExists.orgId !== orgId) {
-  //     throw new BadRequestException('Invalid user.');
-  //   }
-
-  //   const staffExists = await this.databaseService.staff.findUnique({
-  //     where: {
-  //       id: staffId,
-  //     },
-  //   });
-
-  //   if (!staffExists) {
-  //     throw new NotFoundException('Invalid staff.');
-  //   }
-
-  //   const sessions = await this.databaseService.attendanceSession.findMany({
-  //     where: {
-  //       orgId,
-  //       staffId,
-  //       status: 'CLOSED',
-  //       date: {
-  //         gte: start,
-  //         lte: end,
-  //       },
-  //     },
-  //     orderBy: { date: 'asc' },
-  //   });
-
-  //   const workbook = new ExcelJS.Workbook();
-  //   const sheet = workbook.addWorksheet('Last Month Attendance');
-
-  //   sheet.columns = [
-  //     { header: 'Closure Type', key: 'closureType', width: 15 },
-  //     { header: 'Is Late Closure', key: 'isLateClosure', width: 15 },
-  //     { header: 'Late Punch-out Reason', key: 'lateReason', width: 30 },
-  //     {
-  //       header: 'Late Punch-out Recorded At',
-  //       key: 'lateRecordedAt',
-  //       width: 25,
-  //     },
-  //     { header: 'First Punch-in Time', key: 'firstPunchIn', width: 25 },
-  //     { header: 'Last Punch-out Time', key: 'lastPunchOut', width: 25 },
-  //     { header: 'Total Work Duration', key: 'workHours', width: 20 },
-
-  //     { header: 'Total Break Minutes', key: 'breakMinutes', width: 22 },
-  //   ];
-
-  //   sessions.forEach((s) => {
-  //     sheet.addRow({
-  //       closureType: s.closureType ?? '—',
-  //       isLateClosure: s.isLateClosure ? 'Yes' : 'No',
-  //       lateReason: s.latePunchOutReason ?? '',
-  //       lateRecordedAt: this.toLocalDate(s.latePunchOutRecordedAt),
-  //       firstPunchIn: this.toLocalDate(s.firstPunchInAt),
-  //       lastPunchOut: this.toLocalDate(s.lastPunchOutAt),
-  //       workHours: this.formatWorkDuration(s.totalWorkSeconds),
-
-  //       breakMinutes: this.formatWorkDuration(s.totalBreakSeconds),
-  //     });
-  //   });
-
-  //   // Header styling
-  //   sheet.getRow(1).font = { bold: true };
-  //   sheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
-  //   sheet.getColumn('lateRecordedAt').numFmt = 'dd-mmm-yyyy hh:mm AM/PM';
-  //   sheet.getColumn('firstPunchIn').numFmt = 'dd-mmm-yyyy hh:mm AM/PM';
-  //   sheet.getColumn('lastPunchOut').numFmt = 'dd-mmm-yyyy hh:mm AM/PM';
-
-  //   return { workbook, employeeCode: staffExists.employeeCode };
-  // }
 }

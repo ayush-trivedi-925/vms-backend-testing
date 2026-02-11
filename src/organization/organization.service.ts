@@ -50,6 +50,7 @@ export class OrganizationService {
       planId,
       startsAt,
       endsAt,
+      timezone,
     } = createOrganizationDto;
     const normalizedEmail = email.toLowerCase().trim();
     const organizationExists =
@@ -109,6 +110,7 @@ export class OrganizationService {
           logo: logoUrl,
           accountLimit,
           settingCodeEncrypted,
+          timezone,
         },
       });
 

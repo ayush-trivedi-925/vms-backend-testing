@@ -11,7 +11,9 @@ import {
   Matches,
   Max,
   Min,
+  Validate,
 } from 'class-validator';
+import { IsValidTimezone } from 'src/common/validators/is-valid-timezone.validator';
 
 export class CreateOrganizationDto {
   @IsString()
@@ -21,6 +23,11 @@ export class CreateOrganizationDto {
   @IsString()
   @IsEmail()
   email: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @Validate(IsValidTimezone)
+  timezone: string;
 
   @IsString()
   @IsNotEmpty()
