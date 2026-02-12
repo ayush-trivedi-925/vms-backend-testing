@@ -14,6 +14,9 @@ jobs:
     runs-on: [self-hosted, Linux, X64]
 
     steps:
+      # ------------------------------------------------------------
+      # 1️⃣ Checkout Code
+      # ------------------------------------------------------------
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
         with:
@@ -21,7 +24,7 @@ jobs:
           ref: master
 
       # ------------------------------------------------------------
-      # Pre-deploy sanity checks 
+      # 2️⃣ Pre-deploy sanity checks
       # ------------------------------------------------------------
       - name: 🩺 Pre-deploy sanity checks
         run: |
@@ -38,7 +41,31 @@ jobs:
           echo "✅ Pre-deploy checks passed"
 
       # ------------------------------------------------------------
-      # Deployment Start
+      # 3️⃣ Build Docker image (Limited resources for safety)
+      # ------------------------------------------------------------
+      - name: 🐳 Build Backend Image (Scan Only)
+        run: |
+          set -e
+          docker build \
+            --cpus="2" \
+            --memory="2g" \
+            -t vms-backend-scan:latest \
+            /home/ubuntu/vms
+
+      # ------------------------------------------------------------
+      # 4️⃣ Trivy Scan (REPORT MODE FIRST)
+      # ------------------------------------------------------------
+      - name: 🔍 Scan Docker Image with Trivy
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          image-ref: 'vms-backend-scan:latest'
+          format: 'table'
+          exit-code: '0'              # 🔴 Change to '1' after stable
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+
+      # ------------------------------------------------------------
+      # 5️⃣ Deploy Only If Scan Completed
       # ------------------------------------------------------------
       - name: 🚀 Run Deployment Script
         env:
@@ -58,3 +85,10 @@ jobs:
           bash /home/ubuntu/vms/deploy.sh
 
           echo "✅ Deployment completed successfully"
+
+      # ------------------------------------------------------------
+      # 6️⃣ Cleanup Old Docker Images (Prevent Disk Fill)
+      # ------------------------------------------------------------
+      - name: 🧹 Cleanup Unused Docker Images
+        run: |
+          docker image prune -af || true
