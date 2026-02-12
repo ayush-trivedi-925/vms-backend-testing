@@ -59,7 +59,7 @@ jobs:
         with:
           image-ref: 'vms-backend-scan:latest'
           format: 'table'
-          exit-code: '0'              # 🔴 Change to '1' after 3-5 clean runs
+          exit-code: '1'              # 🔴 Change to '1' after 3-5 clean runs
           severity: 'CRITICAL,HIGH'
           ignore-unfixed: true
 
