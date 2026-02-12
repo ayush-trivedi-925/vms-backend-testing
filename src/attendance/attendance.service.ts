@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -12,8 +13,11 @@ import {
 } from '@prisma/client';
 
 import { ScanAttendanceDto, AttendanceActionDto } from '../dto/attendance.dto';
-// import * as ExcelJS from 'exceljs';
 import { DateTime } from 'luxon';
+
+import { Response } from 'express';
+// import * as ExcelJS from 'exceljs';
+import * as ExcelJS from 'exceljs';
 
 type AttendanceState =
   | 'NO_SESSION_TODAY'
@@ -37,33 +41,6 @@ export class AttendanceService {
   private floorToSecond(date: Date) {
     return new Date(Math.floor(date.getTime() / 1000) * 1000);
   }
-
-  // private endOfOrgDay(date: Date, timezone: string): Date {
-  //   return DateTime.fromJSDate(date, { zone: 'utc' })
-  //     .setZone(timezone)
-  //     .endOf('day')
-  //     .toUTC()
-  //     .toJSDate();
-  // }
-
-  // private toOrgTime(date: Date, timezone: string): string {
-  //   return DateTime.fromJSDate(date, { zone: 'utc' })
-  //     .setZone(timezone)
-  //     .toFormat('dd LLL yyyy hh:mm a');
-  // }
-
-  // private formatWorkDuration(seconds: number): string {
-  //   if (!seconds || seconds <= 0) return '0 mins';
-
-  //   const minutes = Math.round(seconds / 60);
-
-  //   if (minutes < 60) {
-  //     return `${minutes} mins`;
-  //   }
-
-  //   const hours = minutes / 60;
-  //   return `${hours.toFixed(2)} hrs`;
-  // }
 
   private async getStaffByEmployeeCode(
     orgId: string,
@@ -816,5 +793,358 @@ export class AttendanceService {
         newPunchInTime: punchIn.toISOString(),
       };
     });
+  }
+
+  async exportAttendanceRangeExcel(
+    orgId: string,
+    role: string,
+    startIso: string,
+    endIso: string,
+  ): Promise<Buffer> {
+    const allowedRoles = ['SuperAdmin', 'Admin'];
+
+    if (!allowedRoles.includes(role)) {
+      throw new ForbiddenException('Access denied.');
+    }
+    const org = await this.databaseService.organization.findUnique({
+      where: { id: orgId },
+      include: { workingHours: true },
+    });
+    if (!org) throw new Error('Invalid org id');
+
+    const tz = org.timezone || 'UTC';
+
+    // ===== build date range =====
+    const startDT = DateTime.fromISO(startIso, { zone: tz }).startOf('day');
+    const endDT = DateTime.fromISO(endIso, { zone: tz }).startOf('day');
+    if (endDT < startDT)
+      throw new BadRequestException('Ending data cannot be beofre start date.');
+
+    const days: DateTime[] = [];
+    let cur = startDT;
+    while (cur <= endDT) {
+      days.push(cur);
+      cur = cur.plus({ days: 1 });
+    }
+
+    // ===== staff =====
+    const staffList = await this.databaseService.staff.findMany({
+      where: { orgId },
+      include: { department: true, workingHours: true },
+    });
+
+    // ===== sessions =====
+    const dateUTCs = days.map((d) => this.startOfOrgDay(d.toJSDate(), tz));
+
+    const sessions = await this.databaseService.attendanceSession.findMany({
+      where: { orgId, date: { in: dateUTCs } },
+      include: { events: { orderBy: { timestamp: 'asc' } } },
+    });
+
+    const sessionsByKey = new Map<string, any>();
+    for (const s of sessions) {
+      const key = `${s.staffId}:${DateTime.fromJSDate(s.date, {
+        zone: 'utc',
+      }).toISODate()}`;
+      sessionsByKey.set(key, s);
+    }
+
+    // ===== helper =====
+    const getScheduleFor = (staff: any, dt: DateTime) => {
+      const wh =
+        staff.workingHours && staff.workingHours.length
+          ? staff.workingHours
+          : org.workingHours || [];
+
+      const day = dt.toFormat('cccc').toUpperCase();
+      return wh.find((r: any) => r.dayOfWeek === day) || null;
+    };
+
+    const recalcTotalsLocal = (
+      events: { eventType: any; timestamp: Date }[],
+    ) => {
+      let totalWorkSeconds = 0;
+      let totalBreakSeconds = 0;
+      let currentWorkStart: Date | null = null;
+      let currentBreakStart: Date | null = null;
+
+      const sorted = events
+        .map((e) => ({
+          ...e,
+          timestamp: new Date(Math.floor(e.timestamp.getTime() / 1000) * 1000),
+        }))
+        .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+      for (const e of sorted) {
+        switch (e.eventType) {
+          case 'PUNCH_IN':
+          case 'BREAK_END':
+            if (currentBreakStart) {
+              totalBreakSeconds +=
+                (e.timestamp.getTime() - currentBreakStart.getTime()) / 1000;
+              currentBreakStart = null;
+            }
+            currentWorkStart = e.timestamp;
+            break;
+
+          case 'BREAK_START':
+            if (currentWorkStart) {
+              totalWorkSeconds +=
+                (e.timestamp.getTime() - currentWorkStart.getTime()) / 1000;
+              currentWorkStart = null;
+            }
+            currentBreakStart = e.timestamp;
+            break;
+
+          case 'PUNCH_OUT':
+          case 'LATE_PUNCH_OUT':
+            if (currentBreakStart) {
+              totalBreakSeconds +=
+                (e.timestamp.getTime() - currentBreakStart.getTime()) / 1000;
+              currentBreakStart = null;
+            } else if (currentWorkStart) {
+              totalWorkSeconds +=
+                (e.timestamp.getTime() - currentWorkStart.getTime()) / 1000;
+              currentWorkStart = null;
+            }
+            break;
+        }
+      }
+
+      return { totalWorkSeconds, totalBreakSeconds };
+    };
+
+    // ===== workbook =====
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Attendance');
+
+    // ===== LEGEND =====
+    sheet.addRow([]);
+    sheet.addRow(['Legend']);
+
+    const legendItems = [
+      { label: 'Absent', color: 'FFFF9999' },
+      { label: 'Late Arrival', color: 'FFFFFF99' },
+      { label: 'Left Early', color: 'FFFFCC99' },
+      { label: 'Late Punch Out', color: 'FFD9B3FF' },
+      { label: 'Present', color: 'FFCCFFCC' },
+      { label: 'Off Day', color: 'FFE0E0E0' },
+    ];
+
+    legendItems.forEach((l) => {
+      const row = sheet.addRow(['', l.label]);
+      row.getCell(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: l.color },
+      };
+    });
+
+    sheet.addRow([]);
+    sheet.addRow([]);
+
+    // ===== columns =====
+    const headers = [
+      'Employee Name',
+      'Employee ID',
+      'Email',
+      'Department',
+      'Date',
+      'Status',
+      'Arrival',
+      'Leaving',
+      'Work Hours',
+      'Break Hours',
+      'Late Punch Out',
+      'Reason',
+      'Late Arrival',
+      'Left Early',
+    ];
+
+    let rowIndex = sheet.rowCount + 1;
+
+    // ===== DATE LOOP =====
+    for (const dt of days) {
+      // ===== date title =====
+      const dateTitle = `${dt.toFormat('EEEE').toUpperCase()} – ${dt.toFormat(
+        'dd/MM/yyyy',
+      )}`;
+
+      sheet.mergeCells(rowIndex, 1, rowIndex + 1, headers.length);
+      const titleCell = sheet.getCell(rowIndex, 1);
+      titleCell.value = dateTitle;
+      titleCell.font = { bold: true, size: 14 };
+      titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      titleCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF00FFFF' },
+      };
+
+      rowIndex += 2;
+
+      // ===== header =====
+      const headerRow = sheet.addRow(headers);
+      headerRow.font = { bold: true };
+      headerRow.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'medium' },
+          left: { style: 'thin' },
+          bottom: { style: 'medium' },
+          right: { style: 'thin' },
+        };
+      });
+
+      rowIndex++;
+
+      // ===== staff =====
+      for (const staff of staffList) {
+        const keyIso = DateTime.fromJSDate(
+          this.startOfOrgDay(dt.toJSDate(), tz),
+          { zone: 'utc' },
+        ).toISODate();
+
+        const session = sessionsByKey.get(`${staff.id}:${keyIso}`);
+
+        const schedule = getScheduleFor(staff, dt);
+        const isOffDay = !!schedule && schedule.isClosed;
+
+        let status = 'Absent';
+        let arrivalStr = '';
+        let departureStr = '';
+        let workH = 0;
+        let breakH = 0;
+        let latePunchOut = 'No';
+        let latePunchReason = '';
+        let lateArrival = 'No';
+        let leftEarly = 'No';
+
+        if (session) {
+          status = 'Present';
+          const events = session.events || [];
+
+          const firstIn = events.find(
+            (e: any) =>
+              e.eventType === 'PUNCH_IN' || e.eventType === 'BREAK_END',
+          );
+          const lastOut = [...events]
+            .reverse()
+            .find(
+              (e: any) =>
+                e.eventType === 'PUNCH_OUT' || e.eventType === 'LATE_PUNCH_OUT',
+            );
+
+          const firstTs = firstIn
+            ? DateTime.fromJSDate(firstIn.timestamp).setZone(tz)
+            : null;
+          const lastTs = lastOut
+            ? DateTime.fromJSDate(lastOut.timestamp).setZone(tz)
+            : null;
+
+          if (firstTs) arrivalStr = firstTs.toFormat('HH:mm:ss');
+          if (lastTs) departureStr = lastTs.toFormat('HH:mm:ss');
+
+          const { totalWorkSeconds, totalBreakSeconds } = recalcTotalsLocal(
+            events.map((e: any) => ({
+              eventType: e.eventType,
+              timestamp: e.timestamp,
+            })),
+          );
+          workH = totalWorkSeconds;
+          breakH = totalBreakSeconds;
+
+          if (
+            events.some((e: any) => e.eventType === 'LATE_PUNCH_OUT') ||
+            session.closureType === 'LATE'
+          ) {
+            latePunchOut = 'Yes';
+            const lateEvent = events.find(
+              (e: any) => e.eventType === 'LATE_PUNCH_OUT',
+            );
+            if (lateEvent) latePunchReason = lateEvent.correctionNote ?? '';
+          }
+
+          if (schedule && schedule.startsAt && firstTs) {
+            const schedStart = DateTime.fromISO(
+              `${dt.toISODate()}T${schedule.startsAt}`,
+              { zone: tz },
+            );
+            if (firstTs > schedStart) lateArrival = 'Yes';
+          }
+
+          if (schedule && schedule.endsAt && lastTs) {
+            const schedEnd = DateTime.fromISO(
+              `${dt.toISODate()}T${schedule.endsAt}`,
+              { zone: tz },
+            );
+            if (lastTs < schedEnd) leftEarly = 'Yes';
+          }
+        } else if (isOffDay) {
+          status = 'Off Day';
+        }
+
+        const workHStr = workH
+          ? `${Math.floor(workH / 3600)}:${String(
+              Math.floor((workH % 3600) / 60),
+            ).padStart(2, '0')}`
+          : '';
+
+        const breakHStr = breakH
+          ? `${Math.floor(breakH / 3600)}:${String(
+              Math.floor((breakH % 3600) / 60),
+            ).padStart(2, '0')}`
+          : '';
+
+        const row = sheet.addRow([
+          staff.name,
+          staff.employeeCode ?? '',
+          staff.email ?? '',
+          staff.department?.name ?? '',
+          dt.toFormat('dd/MM/yyyy'),
+          status,
+          arrivalStr,
+          departureStr,
+          workHStr,
+          breakHStr,
+          latePunchOut,
+          latePunchReason,
+          lateArrival,
+          leftEarly,
+        ]);
+
+        // ===== color =====
+        let color = '';
+        if (status === 'Absent') color = 'FFFFCCCC';
+        else if (status === 'Off Day') color = 'FFEFEFEF';
+        else if (latePunchOut === 'Yes') color = 'FFE0CCFF';
+        else if (lateArrival === 'Yes') color = 'FFFFFF99';
+        else if (leftEarly === 'Yes') color = 'FFFFCC99';
+        else color = 'FFCCFFCC';
+
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: color },
+          };
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' },
+          };
+        });
+
+        rowIndex++;
+      }
+    }
+
+    // ===== column width =====
+    sheet.columns.forEach((col) => {
+      col.width = 18;
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
   }
 }

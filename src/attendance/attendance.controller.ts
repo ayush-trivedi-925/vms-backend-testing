@@ -3,8 +3,8 @@ import {
   Body,
   Controller,
   Get,
-  Param,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
@@ -34,37 +34,26 @@ export class AttendanceController {
     );
   }
 
-  // @Get('/:staffId/last-month')
-  // async downloadLastMonthAttendance(
-  //   @Res() res: Response,
-  //   @Req() req: any,
-  //   @Param('staffId') staffId: string,
-  // ) {
-  //   const { workbook, employeeCode } =
-  //     await this.attendanceService.exportLastMonthAttendance(
-  //       req.orgId,
-  //       req.userId,
-  //       req.role,
-  //       staffId,
-  //     );
-
-  //   const monthLabel = new Date().toLocaleString('default', {
-  //     month: 'short',
-  //     year: 'numeric',
-  //   });
-
-  //   const fileName = `${employeeCode}_Attendance_${monthLabel}.xlsx`;
-
-  //   res.setHeader(
-  //     'Content-Type',
-  //     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  //   );
-
-  //   res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-
-  //   res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
-
-  //   await workbook.xlsx.write(res);
-  //   res.end();
-  // }
+  // AttendanceController
+  @Get('export')
+  async export(
+    @Req() req,
+    @Query('start') start: string,
+    @Query('end') end: string,
+    @Res() res: Response,
+  ) {
+    const buf = await this.attendanceService.exportAttendanceRangeExcel(
+      req.orgId,
+      req.role,
+      start,
+      end,
+    );
+    const filename = `attendance-${start}-${end}.xlsx`;
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.send(buf);
+  }
 }
