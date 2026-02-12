@@ -29,8 +29,8 @@ jobs:
       - name: 🩺 Pre-deploy sanity checks
         run: |
           set -e
-          echo "🔍 Checking Docker status..."
-          docker info >/dev/null
+          echo "🔍 Checking Docker daemon..."
+          docker info > /dev/null
 
           echo "💾 Disk usage:"
           df -h
@@ -38,34 +38,33 @@ jobs:
           echo "🧠 Memory usage:"
           free -m
 
+          echo "📦 Running containers:"
+          docker ps
+
           echo "✅ Pre-deploy checks passed"
 
       # ------------------------------------------------------------
-      # 3️⃣ Build Docker image (Limited resources for safety)
+      # 3️⃣ Build Backend Image (Scan Only)
       # ------------------------------------------------------------
       - name: 🐳 Build Backend Image (Scan Only)
         run: |
           set -e
-          docker build \
-            --cpus="2" \
-            --memory="2g" \
-            -t vms-backend-scan:latest \
-            /home/ubuntu/vms
+          DOCKER_BUILDKIT=1 docker build -t vms-backend-scan:latest /home/ubuntu/vms
 
       # ------------------------------------------------------------
-      # 4️⃣ Trivy Scan (REPORT MODE FIRST)
+      # 4️⃣ Trivy Security Scan (Safe Mode First)
       # ------------------------------------------------------------
       - name: 🔍 Scan Docker Image with Trivy
         uses: aquasecurity/trivy-action@0.20.0
         with:
           image-ref: 'vms-backend-scan:latest'
           format: 'table'
-          exit-code: '0'              # 🔴 Change to '1' after stable
+          exit-code: '0'              # 🔴 Change to '1' after 3-5 clean runs
           severity: 'CRITICAL,HIGH'
           ignore-unfixed: true
 
       # ------------------------------------------------------------
-      # 5️⃣ Deploy Only If Scan Completed
+      # 5️⃣ Deploy to Production
       # ------------------------------------------------------------
       - name: 🚀 Run Deployment Script
         env:
@@ -79,7 +78,6 @@ jobs:
           echo "🕒 $(date)"
           echo "==============================="
 
-          echo "📌 Current branch:"
           git rev-parse --abbrev-ref HEAD
 
           bash /home/ubuntu/vms/deploy.sh
@@ -87,7 +85,7 @@ jobs:
           echo "✅ Deployment completed successfully"
 
       # ------------------------------------------------------------
-      # 6️⃣ Cleanup Old Docker Images (Prevent Disk Fill)
+      # 6️⃣ Cleanup Unused Images (Prevent Disk Issues)
       # ------------------------------------------------------------
       - name: 🧹 Cleanup Unused Docker Images
         run: |
