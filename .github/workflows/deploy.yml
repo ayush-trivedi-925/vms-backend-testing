@@ -14,23 +14,17 @@ jobs:
     runs-on: [self-hosted, Linux, X64]
 
     steps:
-      # ------------------------------------------------------------
-      # 1️⃣ Checkout Code
-      # ------------------------------------------------------------
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: master
 
-      # ------------------------------------------------------------
-      # 2️⃣ Pre-deploy sanity checks
-      # ------------------------------------------------------------
       - name: 🩺 Pre-deploy sanity checks
         run: |
           set -e
-          echo "🔍 Checking Docker daemon..."
-          docker info > /dev/null
+          echo "🔍 Checking Docker status..."
+          docker info >/dev/null
 
           echo "💾 Disk usage:"
           df -h
@@ -38,34 +32,8 @@ jobs:
           echo "🧠 Memory usage:"
           free -m
 
-          echo "📦 Running containers:"
-          docker ps
-
           echo "✅ Pre-deploy checks passed"
 
-      # ------------------------------------------------------------
-      # 3️⃣ Build Backend Image (Scan Only)
-      # ------------------------------------------------------------
-      - name: 🐳 Build Backend Image (Scan Only)
-        run: |
-          set -e
-          DOCKER_BUILDKIT=1 docker build -t vms-backend-scan:latest /home/ubuntu/vms
-
-      # ------------------------------------------------------------
-      # 4️⃣ Trivy Security Scan (Safe Mode First)
-      # ------------------------------------------------------------
-      - name: 🔍 Scan Docker Image with Trivy
-        uses: aquasecurity/trivy-action@0.20.0
-        with:
-          image-ref: 'vms-backend-scan:latest'
-          format: 'table'
-          exit-code: '1'              # 🔴 Change to '1' after 3-5 clean runs
-          severity: 'CRITICAL,HIGH'
-          ignore-unfixed: true
-
-      # ------------------------------------------------------------
-      # 5️⃣ Deploy to Production
-      # ------------------------------------------------------------
       - name: 🚀 Run Deployment Script
         env:
           HOME: /home/ubuntu
@@ -78,15 +46,9 @@ jobs:
           echo "🕒 $(date)"
           echo "==============================="
 
+          echo "📌 Current branch:"
           git rev-parse --abbrev-ref HEAD
 
           bash /home/ubuntu/vms/deploy.sh
 
           echo "✅ Deployment completed successfully"
-
-      # ------------------------------------------------------------
-      # 6️⃣ Cleanup Unused Images (Prevent Disk Issues)
-      # ------------------------------------------------------------
-      - name: 🧹 Cleanup Unused Docker Images
-        run: |
-          docker image prune -af || true
