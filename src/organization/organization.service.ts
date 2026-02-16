@@ -9,20 +9,20 @@ import {
 import { DatabaseService } from 'src/database/database.service';
 import { CreateOrganizationDto } from 'src/dto/create-organization.dto';
 import { EditOrganizationDto } from 'src/dto/edit-organization.dto';
-import { CloudinaryService } from 'src/media/cloudinary.service';
 import { MailService } from 'src/service/mail/mail.service';
 import { encrypt, decrypt } from '../utils/encryption.util';
 import { ConfigService } from '@nestjs/config';
 import { UpdateSubscriptionDto } from 'src/dto/update-subscription.dto';
 import { Weekday } from '@prisma/client';
 import { UpdateDayWorkingHoursDto } from 'src/dto/update-working-hour-day.dto';
+import { S3Service } from 'src/s3/s3.service';
 
 @Injectable()
 export class OrganizationService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly mailService: MailService,
-    private readonly cloudinary: CloudinaryService,
+    private readonly s3Service: S3Service,
     private config: ConfigService,
   ) {}
 
@@ -65,9 +65,9 @@ export class OrganizationService {
 
     if (logo) {
       try {
-        const uploaded = await this.cloudinary.uploadImage(logo, 'acs');
-        logoUrl = uploaded['secure_url'];
+        logoUrl = await this.s3Service.uploadImage(logo);
       } catch (error) {
+        console.error('🔥 S3 UPLOAD ERROR:', error);
         throw new BadRequestException('Image upload failed');
       }
     }
@@ -203,12 +203,11 @@ export class OrganizationService {
       }
     }
 
-    // Upload logo only if provided
     if (logo) {
       try {
-        const uploaded = await this.cloudinary.uploadImage(logo, 'acs');
-        logoUrl = uploaded['secure_url'];
+        logoUrl = await this.s3Service.uploadImage(logo);
       } catch (error) {
+        console.error('🔥 S3 UPLOAD ERROR:', error);
         throw new BadRequestException('Image upload failed');
       }
     }

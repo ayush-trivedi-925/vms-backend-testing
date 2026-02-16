@@ -10,15 +10,13 @@ import { SystemModule } from './system/system.module';
 import { StaffModule } from './staff/staff.module';
 import { OrganizationModule } from './organization/organization.module';
 import config from './config/config';
-import { CloudinaryService } from './media/cloudinary.service';
 import { DepartmentModule } from './department/department.module';
 import { ReasonModule } from './reason/reason.module';
 import { AttendanceModule } from './attendance/attendance.module';
-import { TeamController } from './team/team.controller';
-import { TeamService } from './team/team.service';
 import { TeamModule } from './team/team.module';
 import { PlanModule } from './plan/plan.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { S3Module } from './s3/s3.module';
 
 @Module({
   imports: [
@@ -50,8 +48,9 @@ import { NotificationsModule } from './notifications/notifications.module';
     TeamModule,
     PlanModule,
     NotificationsModule,
+    S3Module,
   ],
   controllers: [AppController],
-  providers: [AppService, CloudinaryService],
+  providers: [AppService],
 })
 export class AppModule {}

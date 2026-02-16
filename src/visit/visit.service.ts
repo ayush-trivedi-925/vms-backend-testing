@@ -10,7 +10,6 @@ import {
 import { DatabaseService } from 'src/database/database.service';
 import { EndVisitDto } from 'src/dto/end-visit.dto';
 import { StartVisitDto } from 'src/dto/start-visit.dto';
-import { CloudinaryService } from 'src/media/cloudinary.service';
 import { MailService } from 'src/service/mail/mail.service';
 import * as QRCode from 'qrcode';
 import * as ExcelJS from 'exceljs';
@@ -19,13 +18,14 @@ import {
   AcceptVisitDto,
   RejectVisitDto,
 } from 'src/dto/accept-reject-visit.dto';
+import { S3Service } from 'src/s3/s3.service';
 
 @Injectable()
 export class VisitService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly mailService: MailService,
-    private readonly cloudinary: CloudinaryService,
+    private readonly s3Service: S3Service,
     private readonly notificationsGateway: NotificationsGateway,
   ) {}
   async startVisit(
@@ -86,12 +86,9 @@ export class VisitService {
 
     if (checkInPicture) {
       try {
-        const uploaded = await this.cloudinary.uploadImage(
-          checkInPicture,
-          'acs',
-        );
-        imageUrl = uploaded['secure_url'];
+        imageUrl = await this.s3Service.uploadImage(checkInPicture);
       } catch (error) {
+        console.error('🔥 S3 UPLOAD ERROR:', error);
         throw new BadRequestException('Image upload failed');
       }
     }
@@ -289,18 +286,6 @@ export class VisitService {
 
     if (visitExists.orgId !== orgId) {
       throw new UnauthorizedException('Unauthorized checkout attempt.');
-    }
-
-    if (checkOutPicture) {
-      try {
-        const uploaded = await this.cloudinary.uploadImage(
-          checkOutPicture,
-          'acs',
-        );
-        imageUrl = uploaded['secure_url'];
-      } catch (error) {
-        throw new BadRequestException('Image upload failed');
-      }
     }
 
     const updatedVisitStatus = await this.databaseService.visit.update({
