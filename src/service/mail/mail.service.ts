@@ -8,15 +8,13 @@ export class MailService {
 
   constructor(private readonly configService: ConfigService) {
     this.transporter = nodemailer.createTransport({
-      host: this.configService.get<string>('mail.host'),
-      port: this.configService.get<number>('mail.port'),
-      secure: true,
+      host: 'smtp.mailgun.org',
+      port: 587,
+      secure: false, // STARTTLS
       auth: {
-        user: this.configService.get<string>('mail.user'),
-        pass: this.configService.get<string>('mail.password'),
+        user: 'notifications@mail.seguevisit.com',
+        pass: this.configService.get<string>('MAILGUN_SMTP_PASS'),
       },
-      // logger: true, // <-- enables built-in Nodemailer logging
-      // debug: true, // <-- prints SMTP traffic
     });
   }
 
@@ -46,7 +44,7 @@ export class MailService {
       });
     }
     const mailOptions = {
-      from: '"Visitor Arrival Notification" <noreply@yourapp.com>',
+      from: '"Visitor Arrival Notification" <notifications@mail.seguevisit.com>',
       to: details.staff?.email,
       subject: `Visitor Arrival Notification - ${details.fullName} at ${details.organization?.name}`,
       html: `
@@ -86,7 +84,7 @@ export class MailService {
     const org = details;
 
     const mailOptions = {
-      from: `"Visitor Management System" <no-reply@segueit.com>`,
+      from: `"Visitor Management System" <notifications@mail.seguevisit.com>`,
       to: org?.email,
       subject: `Your Organization Has Been Successfully Registered - ${org.name}`,
       html: `
@@ -132,7 +130,7 @@ export class MailService {
     }
 
     const mailOptions = {
-      from: '"Check-In Notification" <noreply@yourapp.com>',
+      from: '"Check-In Notification" <notifications@mail.seguevisit.com>',
       to: details.email,
       subject: `Your visit at ${details.organization?.name} has started`,
       html: `
@@ -194,7 +192,7 @@ export class MailService {
 
   async sendForgotPasswordOTP(details: any) {
     const mailOptions = {
-      from: `"Visitor Management System" <no-reply@segueit.com>`,
+      from: `"Visitor Management System" <notifications@mail.seguevisit.com>`,
       to: details.email,
       subject: `Your OTP for Password Reset - SegueIT Visitor Management System`,
       html: `
@@ -223,7 +221,7 @@ export class MailService {
 
   async sendForgotPasswordOTPSystem(details: any) {
     const mailOptions = {
-      from: `"Visitor Management System" <no-reply@segueit.com>`,
+      from: `"Visitor Management System" <notifications@mail.seguevisit.com>`,
       to: details.email,
       subject: `Your OTP for Password Reset - SegueIT Visitor Management System`,
       html: `
@@ -255,7 +253,7 @@ export class MailService {
     const checkInTime = this.formatDate(details.startTime);
 
     const mailOptions = {
-      from: '"Visitor Departure Notification" <noreply@yourapp.com>',
+      from: '"Visitor Departure Notification" <notifications@mail.seguevisit.com>',
       to: details.staff?.email,
       subject: `Visitor Departure Notification - ${details.fullName} at ${details.organization?.name}`,
       html: `
@@ -281,7 +279,7 @@ export class MailService {
     const checkInTime = this.formatDate(details.startTime);
 
     const mailOptions = {
-      from: '"Visit Completion Notification" <noreply@yourapp.com>',
+      from: '"Visit Completion Notification" <notifications@mail.seguevisit.com>',
       to: details.email,
       subject: `Your visit at ${details.organization?.name} has ended`,
       html: `
@@ -309,7 +307,7 @@ export class MailService {
     role: string,
   ) {
     const mailOptions = {
-      from: `"${organization.name} Account Setup" <noreply@yourapp.com>`,
+      from: `"${organization.name} Account Setup" <notifications@mail.seguevisit.com>`,
       to: staff.email,
       subject: `Your ${organization.name} account has been created`,
       html: `
@@ -372,7 +370,7 @@ export class MailService {
 
   async StaffRegistration(staff: any, org: any) {
     const mailOptions = {
-      from: `"Visitor Management System" <segueit.sb@gmail.com>`,
+      from: `"Visitor Management System" <notifications@mail.seguevisit.com>`,
       to: staff?.email,
       subject: `Your Staff Account Has Been Successfully Created - ${org.name}`,
       html: `
@@ -416,7 +414,7 @@ export class MailService {
     const formattedTime = this.formatDate(details.createdAt);
 
     const mailOptions = {
-      from: '"Reception Team" <noreply@yourapp.com>',
+      from: '"Reception Team" <notifications@mail.seguevisit.com>',
       to: details.email,
       subject: `Visit Request Update – ${details.organization?.name}`,
       html: `
@@ -482,7 +480,7 @@ export class MailService {
 
   async VisitRequestToHost(details: any) {
     const mailOptions = {
-      from: '"Visit Request Notification" <noreply@yourapp.com>',
+      from: '"Visit Request Notification" <notifications@mail.seguevisit.com>',
       to: details.staff?.email,
       subject: `Visit Request from ${details.fullName} - ${details.organization?.name}`,
       html: `
@@ -529,7 +527,7 @@ export class MailService {
     const formattedTime = this.formatDate(details.createdAt);
 
     const mailOptions = {
-      from: '"Visit Request Submitted" <noreply@yourapp.com>',
+      from: '"Visit Request Submitted" <notifications@mail.seguevisit.com>',
       to: details.email,
       subject: `Your visit request to ${details.organization?.name} has been sent`,
       html: `
