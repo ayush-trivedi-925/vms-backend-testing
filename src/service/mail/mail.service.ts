@@ -19,9 +19,11 @@ export class MailService {
   }
 
   /** Format date safely */
-  private formatDate(date: Date | string | null): string {
+  private formatDate(date: Date | string | null, timeZone?: string): string {
     if (!date) return 'N/A';
+
     return new Date(date).toLocaleString('en-US', {
+      timeZone: timeZone ?? 'UTC',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -116,7 +118,10 @@ export class MailService {
   }
 
   async VisitStartToVisitor(details: any) {
-    const formattedTime = this.formatDate(details.startTime);
+    const formattedTime = this.formatDate(
+      details.startTime,
+      details.organization?.timezone,
+    );
     const attachments: any = [];
 
     // If QR code buffer exists, add it as attachment
@@ -249,8 +254,14 @@ export class MailService {
   }
 
   async VisitEndToHost(details: any) {
-    const checkOutTime = this.formatDate(details.endTime);
-    const checkInTime = this.formatDate(details.startTime);
+    const checkOutTime = this.formatDate(
+      details.endTime,
+      details.organization.timezone,
+    );
+    const checkInTime = this.formatDate(
+      details.startTime,
+      details.organization.timezone,
+    );
 
     const mailOptions = {
       from: '"Visitor Departure Notification" <notifications@mail.seguevisit.com>',
@@ -275,8 +286,14 @@ export class MailService {
   }
 
   async VisitEndToVisitor(details: any) {
-    const checkOutTime = this.formatDate(details.endTime);
-    const checkInTime = this.formatDate(details.startTime);
+    const checkOutTime = this.formatDate(
+      details.endTime,
+      details.organization.timezone,
+    );
+    const checkInTime = this.formatDate(
+      details.startTime,
+      details.organization.timezone,
+    );
 
     const mailOptions = {
       from: '"Visit Completion Notification" <notifications@mail.seguevisit.com>',
@@ -411,7 +428,10 @@ export class MailService {
   }
 
   async VisitRejectToVisitor(details: any) {
-    const formattedTime = this.formatDate(details.createdAt);
+    const formattedTime = this.formatDate(
+      details.createdAt,
+      details.organization.timezone,
+    );
 
     const mailOptions = {
       from: '"Reception Team" <notifications@mail.seguevisit.com>',
@@ -492,7 +512,7 @@ export class MailService {
       <p><b>Email:</b> ${details.email}</p>
       <p><b>Organization:</b> ${details.visitorOrganization}</p>
       <p><b>Purpose of Visit:</b> ${details.reasonOfVisit?.name}</p>
-      <p><b>Date and Time of Request:</b> ${this.formatDate(details.createdAt)}</p>
+      <p><b>Date and Time of Request:</b> ${this.formatDate(details.createdAt, details.organization.timezone)}</p>
 
       <p>
         Please review the visit request and choose to accept or reject it using the link below:
@@ -524,7 +544,10 @@ export class MailService {
   }
 
   async VisitRequestToVisitor(details: any) {
-    const formattedTime = this.formatDate(details.createdAt);
+    const formattedTime = this.formatDate(
+      details.createdAt,
+      details.organization.timezone,
+    );
 
     const mailOptions = {
       from: '"Visit Request Submitted" <notifications@mail.seguevisit.com>',
@@ -539,7 +562,7 @@ export class MailService {
       <p><b>Email:</b> ${details.staff?.email}</p>
       <p><b>Designation:</b> ${details.staff?.designation || 'N/A'}</p>
       <p><b>Department:</b> ${details.staff?.department?.name || 'Not Assigned'}</p>
-      <p><b>Date and Time of Request:</b> ${this.formatDate(details.createdAt)}</p>
+      <p><b>Date and Time of Request:</b> ${this.formatDate(details.createdAt, details.organization.timezone)}</p>
 
       <p>
         Once your host approves the visit, you will receive another email with further instructions.
