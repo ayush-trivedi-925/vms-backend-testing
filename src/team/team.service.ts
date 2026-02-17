@@ -655,7 +655,11 @@ export class TeamService {
     const teams = await this.databaseService.team.findMany({
       where: { orgId },
       include: {
-        masterManager: true, // or rename later to teamLead
+        masterManager: {
+          include: {
+            department: true,
+          },
+        }, // or rename later to teamLead
         _count: {
           select: {
             members: true,
