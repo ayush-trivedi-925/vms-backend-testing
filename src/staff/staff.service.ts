@@ -268,6 +268,28 @@ export class StaffService {
           include: { department: true }, // include so we know department name
         });
 
+        // Generate OTP
+        const oneTimePassword = this.generateOneTimePassword(
+          organizationExists.name,
+        );
+
+        // Hash OTP
+        const hashedPassword = await bcrypt.hash(oneTimePassword, 10);
+
+        // Create credential
+        await tx.userCredential.create({
+          data: {
+            orgId: targetOrgId,
+            email: normalizedEmail,
+            password: hashedPassword,
+            role: 'Staff',
+            firstTimeLogin: true,
+            staff: {
+              connect: { id: staffMember.id },
+            },
+          },
+        });
+
         results.push({
           success: true,
           message: `${name} has been added successfully.`,
@@ -282,6 +304,7 @@ export class StaffService {
           employeeCode: staffMember.employeeCode,
           designation: staffMember.designation,
           departmentName: staffMember.department?.name ?? 'N/A',
+          oneTimePassword,
         });
       }
     }); // end transaction
@@ -311,11 +334,12 @@ export class StaffService {
           try {
             await this.mailService.StaffRegistration(
               {
+                oneTimePassword: s.oneTimePassword,
                 name: s.name,
                 email: s.email,
                 employeeCode: s.employeeCode,
                 designation: s.designation,
-                department: s.departmentName,
+                departmentName: s.departmentName,
                 qrCodeBuffer, // attach buffer (may be null - mailer should handle)
               },
               organizationExists,
