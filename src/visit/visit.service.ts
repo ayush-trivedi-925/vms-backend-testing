@@ -322,6 +322,8 @@ export class VisitService {
       );
     }
 
+   
+
     const visitExists = await this.databaseService.visit.findUnique({
       where: { id: visitId },
       include: {
@@ -333,6 +335,8 @@ export class VisitService {
         reasonOfVisit: true,
       },
     });
+
+   
 
     if (!visitExists) {
       throw new NotFoundException('No such visit found.');

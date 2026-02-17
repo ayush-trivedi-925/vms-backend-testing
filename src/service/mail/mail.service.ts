@@ -84,13 +84,13 @@ export class MailService {
     const org = details;
 
     const mailOptions = {
-      from: `"Visitor Management System" <notifications@mail.seguevisit.com>`,
+      from: `"SegueVisit Staff & Visitor Management System" <notifications@mail.seguevisit.com>`,
       to: org?.email,
       subject: `Your Organization Has Been Successfully Registered - ${org.name}`,
       html: `
       <p>Dear ${org?.contactPerson || 'Valued Partner'},</p>
 
-      <p>We’re delighted to inform you that your organization has been successfully registered on the <b>SegueIT Visitor Management System</b>.</p>
+      <p>We’re delighted to inform you that your organization has been successfully registered on the <b>SegueVisit Staff & Visitor Management System</b>.</p>
 
       <p>Here are your organization’s registration details:</p>
       <ul>
@@ -102,13 +102,13 @@ export class MailService {
         <li><b>GST:</b> ${org.gst || 'N/A'}</li>
       </ul>
 
-      <p>To activate your dashboard access, please provide the <b>Super Admin’s email address</b>. 
-      This will allow us to assign appropriate roles and grant system access for managing your organization’s visitor data.</p>
+      <p>To activate your dashboard access, please provide the <b>Super Admin’s</b> email address.
+      This will allow us to assign appropriate roles and grant system access for managing your organization’s data. If you already provided details, please ignore.</p>
 
-      <p>Thank you for choosing <b>SegueIT Visitor Management System</b> to streamline your visitor check-ins and enhance workplace security.</p>
+      <p>Thank you for choosing <b>SegueVisit Staff & Visitor Management System</b> to streamline your visitor check-ins and enhance workplace security.</p>
 
       <p>Best regards,<br/>
-      <b>SegueIT Visitor Management Team</b></p>
+      <b>SegueVisit Staff & Visitor Management System</b></p>
     `,
     };
 
@@ -192,15 +192,15 @@ export class MailService {
 
   async sendForgotPasswordOTP(details: any) {
     const mailOptions = {
-      from: `"Visitor Management System" <notifications@mail.seguevisit.com>`,
+      from: `"SegueVisit Staff & Visitor Management System" <notifications@mail.seguevisit.com>`,
       to: details.email,
-      subject: `Your OTP for Password Reset - SegueIT Visitor Management System`,
+      subject: `Your OTP for Password Reset - SegueVisit Staff & Visitor Management System`,
       html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
         <h2 style="color: #2b6cb0;">Password Reset Request</h2>
         <p>Dear ${details.name || 'User'},</p>
 
-        <p>We received a request to reset your password for the <b>SegueIT Visitor Management System</b> account associated with this email address.</p>
+        <p>We received a request to reset your password for the <b>SegueVisit Staff & Visitor Management System</b> account associated with this email address.</p>
 
         <p>Your One-Time Password (OTP) for verification is:</p>
 
@@ -211,7 +211,7 @@ export class MailService {
         <p>If you did not request a password reset, you can safely ignore this email — your password will remain unchanged.</p>
 
         <p>Thank you,<br/>
-        <b>SegueIT Visitor Management Team</b></p>
+        <b>SegueVisit Staff & Visitor Management System</b></p>
       </div>
     `,
     };
@@ -221,15 +221,15 @@ export class MailService {
 
   async sendForgotPasswordOTPSystem(details: any) {
     const mailOptions = {
-      from: `"Visitor Management System" <notifications@mail.seguevisit.com>`,
+      from: `"SegueVisit Staff & Visitor Management System" <notifications@mail.seguevisit.com>`,
       to: details.email,
-      subject: `Your OTP for Password Reset - SegueIT Visitor Management System`,
+      subject: `Your OTP for Password Reset - SegueVisit Staff & Visitor Management System`,
       html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
         <h2 style="color: #2b6cb0;">Password Reset Request</h2>
         <p>${details.organizationName || 'User'},</p>
 
-        <p>We received a request to reset your password for the <b>SegueIT Visitor Management System</b> account associated with this email address.</p>
+        <p>We received a request to reset your password for the <b>SegueVisit Staff & Visitor Management System</b> account associated with this email address.</p>
 
         <p>Your One-Time Password (OTP) for verification is:</p>
 
@@ -240,7 +240,7 @@ export class MailService {
         <p>If you did not request a password reset, you can safely ignore this email — your password will remain unchanged.</p>
 
         <p>Thank you,<br/>
-        <b>SegueIT Visitor Management Team</b></p>
+        <b>SegueVisit Staff & Visitor Management System</b></p>
       </div>
     `,
     };
@@ -370,13 +370,13 @@ export class MailService {
 
   async StaffRegistration(staff: any, org: any) {
     const mailOptions = {
-      from: `"Visitor Management System" <notifications@mail.seguevisit.com>`,
+      from: `"SegueVisit Staff & Visitor Management System" <notifications@mail.seguevisit.com>`,
       to: staff?.email,
       subject: `Your Staff Account Has Been Successfully Created - ${org.name}`,
       html: `
       <p>Dear ${staff?.name || 'Team Member'},</p>
 
-      <p>We are pleased to inform you that your staff profile has been successfully created in the <b>SegueVisit Visitor Management System</b>.</p>
+      <p>We are pleased to inform you that your staff profile has been successfully created in the <b>SegueVisit Staff & Visitor Management System</b>.</p>
 
       <p>Here are your registration details:</p>
 
