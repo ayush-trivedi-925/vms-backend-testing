@@ -5,11 +5,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { AuthRoleEnum, Weekday } from '@prisma/client';
-import { DatabaseService } from 'src/database/database.service';
-import { AddStaffMemberDto } from 'src/dto/add-staff-member.dto';
-import { EditStaffMemberDto } from 'src/dto/edit-staff-member.dto';
+import { DatabaseService } from '../database/database.service';
+import { AddStaffMemberDto } from '../dto/add-staff-member.dto';
+import { EditStaffMemberDto } from '../dto/edit-staff-member.dto';
 import * as bcrypt from 'bcrypt';
-import { MailService } from 'src/service/mail/mail.service';
+import { MailService } from '../service/mail/mail.service';
 
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');

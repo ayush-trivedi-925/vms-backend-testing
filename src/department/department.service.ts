@@ -4,8 +4,8 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { DatabaseService } from 'src/database/database.service';
-import { CreateDepartmentDto } from 'src/dto/create-department.dto';
+import { DatabaseService } from '../database/database.service';
+import { CreateDepartmentDto } from '../dto/create-department.dto';
 
 @Injectable()
 export class DepartmentService {

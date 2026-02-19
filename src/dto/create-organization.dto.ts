@@ -13,7 +13,7 @@ import {
   Min,
   Validate,
 } from 'class-validator';
-import { IsValidTimezone } from 'src/common/validators/is-valid-timezone.validator';
+import { IsValidTimezone } from '../common/validators/is-valid-timezone.validator';
 
 export class CreateOrganizationDto {
   @IsString()

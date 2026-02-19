@@ -11,8 +11,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ReasonService } from './reason.service';
-import { AddReasonDto } from 'src/dto/add-reason.dto';
-import { AuthGuard } from 'src/guard/auth.guard';
+import { AddReasonDto } from '../dto/add-reason.dto';
+import { AuthGuard } from '../guard/auth.guard';
 @UseGuards(AuthGuard)
 @Controller('reason')
 export class ReasonController {

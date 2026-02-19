@@ -8,8 +8,8 @@ import {
 
 import { Reflector } from '@nestjs/core';
 import { AuthRoleEnum } from '@prisma/client';
-import { DatabaseService } from 'src/database/database.service';
-import { REQUIRED_ROLE_KEY } from 'src/decorators/required-role.decorator';
+import { DatabaseService } from '../database/database.service';
+import { REQUIRED_ROLE_KEY } from '../decorators/required-role.decorator';
 
 @Injectable()
 export class UserRoleGuard implements CanActivate {

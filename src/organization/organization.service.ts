@@ -6,16 +6,16 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { DatabaseService } from 'src/database/database.service';
-import { CreateOrganizationDto } from 'src/dto/create-organization.dto';
-import { EditOrganizationDto } from 'src/dto/edit-organization.dto';
-import { MailService } from 'src/service/mail/mail.service';
+import { DatabaseService } from '../database/database.service';
+import { CreateOrganizationDto } from '../dto/create-organization.dto';
+import { EditOrganizationDto } from '../dto/edit-organization.dto';
+import { MailService } from '../service/mail/mail.service';
 import { encrypt, decrypt } from '../utils/encryption.util';
 import { ConfigService } from '@nestjs/config';
-import { UpdateSubscriptionDto } from 'src/dto/update-subscription.dto';
+import { UpdateSubscriptionDto } from '../dto/update-subscription.dto';
 import { Weekday } from '@prisma/client';
-import { UpdateDayWorkingHoursDto } from 'src/dto/update-working-hour-day.dto';
-import { S3Service } from 'src/s3/s3.service';
+import { UpdateDayWorkingHoursDto } from '../dto/update-working-hour-day.dto';
+import { S3Service } from '../s3/s3.service';
 
 @Injectable()
 export class OrganizationService {

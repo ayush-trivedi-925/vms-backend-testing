@@ -1,4 +1,4 @@
-// src/dto/working-hours.dto.ts
+// ../dto/working-hours.dto.ts
 import { Weekday } from '@prisma/client';
 import {
   IsArray,

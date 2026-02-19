@@ -4,13 +4,13 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { DatabaseService } from 'src/database/database.service';
+import { DatabaseService } from '../database/database.service';
 import { CreateTeamDto } from '../dto/create-team.dto';
 import { AddMembersDto } from '../dto/add-members.dto';
 import { SetReportingDto } from '../dto/set-reporting.dto';
 import { RemoveReportingDto } from '../dto/remove-reporting.dto';
-import { EditTeamDto } from 'src/dto/edit-team.dto';
-import { BulkSetReportingDto } from 'src/dto/bulk-set-reporting';
+import { EditTeamDto } from '../dto/edit-team.dto';
+import { BulkSetReportingDto } from '../dto/bulk-set-reporting';
 
 @Injectable()
 export class TeamService {

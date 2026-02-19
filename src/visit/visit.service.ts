@@ -7,18 +7,15 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { DatabaseService } from 'src/database/database.service';
-import { EndVisitDto } from 'src/dto/end-visit.dto';
-import { StartVisitDto } from 'src/dto/start-visit.dto';
-import { MailService } from 'src/service/mail/mail.service';
+import { DatabaseService } from '../database/database.service';
+import { EndVisitDto } from '../dto/end-visit.dto';
+import { StartVisitDto } from '../dto/start-visit.dto';
+import { MailService } from '../service/mail/mail.service';
 import * as QRCode from 'qrcode';
 import * as ExcelJS from 'exceljs';
-import { NotificationsGateway } from 'src/notifications/notifications.gateway';
-import {
-  AcceptVisitDto,
-  RejectVisitDto,
-} from 'src/dto/accept-reject-visit.dto';
-import { S3Service } from 'src/s3/s3.service';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { AcceptVisitDto, RejectVisitDto } from '../dto/accept-reject-visit.dto';
+import { S3Service } from '../s3/s3.service';
 
 @Injectable()
 export class VisitService {
@@ -322,8 +319,6 @@ export class VisitService {
       );
     }
 
-   
-
     const visitExists = await this.databaseService.visit.findUnique({
       where: { id: visitId },
       include: {
@@ -335,8 +330,6 @@ export class VisitService {
         reasonOfVisit: true,
       },
     });
-
-   
 
     if (!visitExists) {
       throw new NotFoundException('No such visit found.');

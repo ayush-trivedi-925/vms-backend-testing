@@ -1,8 +1,8 @@
 import { Body, Controller, Post, Put, Req, UseGuards } from '@nestjs/common';
-import { AuthGuard } from 'src/guard/auth.guard';
+import { AuthGuard } from '../guard/auth.guard';
 import { AuthService } from './auth.service';
-import { RegisterRootDto } from 'src/dto/register-root.dto';
-import { ResetPasswordDto } from 'src/dto/reset-password.dto';
+import { RegisterRootDto } from '../dto/register-root.dto';
+import { ResetPasswordDto } from '../dto/reset-password.dto';
 
 @Controller('auth')
 export class AuthController {

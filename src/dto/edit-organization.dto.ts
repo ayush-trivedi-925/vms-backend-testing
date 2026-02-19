@@ -12,7 +12,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { WorkingHoursDto } from './working-hours.dto';
-import { IsValidTimezone } from 'src/common/validators/is-valid-timezone.validator';
+import { IsValidTimezone } from '../common/validators/is-valid-timezone.validator';
 
 export class EditOrganizationDto {
   @IsOptional()

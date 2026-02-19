@@ -12,14 +12,14 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { CreateOrganizationDto } from 'src/dto/create-organization.dto';
+import { CreateOrganizationDto } from '../dto/create-organization.dto';
 import { OrganizationService } from './organization.service';
-import { AuthGuard } from 'src/guard/auth.guard';
-import { EditOrganizationDto } from 'src/dto/edit-organization.dto';
+import { AuthGuard } from '../guard/auth.guard';
+import { EditOrganizationDto } from '../dto/edit-organization.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { multerConfig } from 'src/service/multer/multer.config';
-import { UpdateSubscriptionDto } from 'src/dto/update-subscription.dto';
-import { UpdateDayWorkingHoursDto } from 'src/dto/update-working-hour-day.dto';
+import { multerConfig } from '../service/multer/multer.config';
+import { UpdateSubscriptionDto } from '../dto/update-subscription.dto';
+import { UpdateDayWorkingHoursDto } from '../dto/update-working-hour-day.dto';
 import { Weekday } from '@prisma/client';
 
 @UseGuards(AuthGuard)

@@ -10,13 +10,13 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { TeamService } from './team.service';
-import { CreateTeamDto } from 'src/dto/create-team.dto';
-import { AuthGuard } from 'src/guard/auth.guard';
-import { AddMembersDto } from 'src/dto/add-members.dto';
-import { SetReportingDto } from 'src/dto/set-reporting.dto';
-import { RemoveReportingDto } from 'src/dto/remove-reporting.dto';
-import { EditTeamDto } from 'src/dto/edit-team.dto';
-import { BulkSetReportingDto } from 'src/dto/bulk-set-reporting';
+import { CreateTeamDto } from '../dto/create-team.dto';
+import { AuthGuard } from '../guard/auth.guard';
+import { AddMembersDto } from '../dto/add-members.dto';
+import { SetReportingDto } from '../dto/set-reporting.dto';
+import { RemoveReportingDto } from '../dto/remove-reporting.dto';
+import { EditTeamDto } from '../dto/edit-team.dto';
+import { BulkSetReportingDto } from '../dto/bulk-set-reporting';
 
 @UseGuards(AuthGuard)
 @Controller('team')
